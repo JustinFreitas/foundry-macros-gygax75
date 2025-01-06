@@ -81,25 +81,24 @@ if (document?.getElementById('sheet-data')) {
                         const boldActorName = `<strong>${actor.name}</strong>`;
                         if (actorBank) {
                             if (bankedGold === undefined || bankedGold === '' || bankedGold < 0) {
-                                actorLogs.push(`${boldActorName}: No change, no upkeep value in sheet data or number field<br/>`);
+                                actorLogs.push(`${boldActorName}: No change, no upkeep value in sheet data or number field.<br/>`);
                             } else if (bankedGold === 0) {
-                                actorLogs.push(`${boldActorName}: No change<br/>`);
+                                actorLogs.push(`${boldActorName}: No change.<br/>`);
                             } else {
                                 const currentGold = actorBank.system.quantity.value;
                                 const newGold = currentGold - bankedGold;
                                 actorBank.update({system: {quantity: {value: currentGold - bankedGold}}});
-                                actorLogs.push(newGold > 0 ? `${boldActorName}: From ${currentGold} to ${newGold}<br/>`
-                                    : `${boldActorName}: From ${currentGold} to 0 (calculated: ${newGold})<br/>`);
+                                actorLogs.push(newGold > 0 ? `${boldActorName}: Bank withdraw from ${currentGold}gp to ${newGold}gp.<br/>`
+                                    : `${boldActorName}: Bank withdraw from ${currentGold}gp to 0 (calculated: ${newGold}).<br/>`);
                             }
                         } else {
-                            actorLogs.push(`${boldActorName}: No bank named ${BANK_NAME}<br/>`);
+                            actorLogs.push(`${boldActorName}: No bank ledger named ${BANK_NAME}<br/>`);
                         }
                     }
 
                     const chatMessage = partyActors.length > 0 ? actorLogs.join('<br/>') : 'No characters in party';
                     ChatMessage.create({
                         content: chatMessage,
-                        whisper: ChatMessage.getWhisperRecipients("GM")
                     });
                 }
             },
