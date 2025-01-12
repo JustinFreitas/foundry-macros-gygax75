@@ -1,45 +1,47 @@
-function findCharacterInSheet(twoDimensionalArray, nameToFind) {
-    for (let row = 0; row < twoDimensionalArray.length; row++) {
-        for (let col = 0; col < twoDimensionalArray[row].length; col++) {
-            if (twoDimensionalArray[row][col] === nameToFind) {
-                return {row: row, col: col};
-            }
-        }
-    }
-
-    return undefined;
-}
-
-function findUpkeepForCharacterInSheet(twoDimensionalArray, nameToFind, defaultValue) {
-    const characterCoords = findCharacterInSheet(twoDimensionalArray, nameToFind);
-    if (characterCoords === undefined) {
-        return defaultValue;
-    }
-
-    return twoDimensionalArray[characterCoords.row + 20][characterCoords.col + 1].split('gp')[0].trim();
-}
-
-function onPasteTextArea() {
-    // Use setTimeout so that the pasted text can actually get there before referencing it.
-    setTimeout(() => {
-        const sheetDataRaw = document.getElementById('sheet-data').value;
-        const sheetDataGrid = sheetDataRaw.split('\n').map(line => line.split('\t'));
-        const partyActors = document.getElementsByClassName('actor-name');
-        const characters = document.getElementsByClassName('character');
-        for (let i = 0; i < characters.length; i++) {
-            const actor = partyActors[i];
-            const baseActorName = actor.innerHTML.split('(')[0].trim();
-            characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
-        }
-    }, 0);
-}
-
 if (document?.getElementById('sheet-data')) {
     console.log('Upkeep Input Window Already Open');
 } else {
     const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
     const formHtml = [];
     formHtml.push(`
+<script type="text/javascript">
+    function findCharacterInSheet(twoDimensionalArray, nameToFind) {
+        for (let row = 0; row < twoDimensionalArray.length; row++) {
+            for (let col = 0; col < twoDimensionalArray[row].length; col++) {
+                if (twoDimensionalArray[row][col] === nameToFind) {
+                    return {row: row, col: col};
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    function findUpkeepForCharacterInSheet(twoDimensionalArray, nameToFind, defaultValue) {
+        const characterCoords = findCharacterInSheet(twoDimensionalArray, nameToFind);
+        if (characterCoords === undefined) {
+            return defaultValue;
+        }
+
+        return twoDimensionalArray[characterCoords.row + 20][characterCoords.col + 1].split('gp')[0].trim();
+    }
+
+    function onPasteTextArea() {
+        // Use setTimeout so that the pasted text can actually get there before referencing it.
+        setTimeout(() => {
+            const sheetDataRaw = document.getElementById('sheet-data').value;
+            const sheetDataGrid = sheetDataRaw.split(\'\\n\').map(line => line.split(\'\\t\'));
+            const partyActors = document.getElementsByClassName('actor-name');
+            const characters = document.getElementsByClassName('character');
+            for (let i = 0; i < characters.length; i++) {
+                const actor = partyActors[i];
+                const baseActorName = actor.innerHTML.split('(')[0].trim();
+                characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
+            }
+        }, 0);
+
+    }
+</script>
 <form>
     <div class="form-group">
         <label>Sheet Data</label>
