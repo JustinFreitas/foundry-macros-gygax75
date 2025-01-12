@@ -52,13 +52,14 @@ if (document?.getElementById('sheet-data')) {
     </div>
 `);
 
-    partyActors.forEach(actor => {
-        formHtml.push(`
-        <div class="form-group">
-            <label class="actor-name">${actor.name}</label>
-            <input type="number" class="character" />
-        </div>
-    `);
+    partyActors.filter(actor => !actor.system.retainer?.enabled)
+               .forEach(actor => {
+                    formHtml.push(`
+                    <div class="form-group">
+                        <label class="actor-name">${actor.name}</label>
+                        <input type="number" class="character" />
+                    </div>
+               `);
     });
 
     formHtml.push('</form>');
