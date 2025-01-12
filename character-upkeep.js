@@ -80,16 +80,14 @@ if (document?.getElementById('sheet-data')) {
                         const actorBank = actor.items.getName(BANK_NAME);
                         const boldActorName = `<strong>${actor.name}</strong>`;
                         if (actorBank) {
-                            if (bankedGold === undefined || bankedGold === '' || bankedGold < 0) {
-                                actorLogs.push(`${boldActorName}: No change, no upkeep value in sheet data or number field.<br/>`);
-                            } else if (bankedGold === 0) {
-                                actorLogs.push(`${boldActorName}: No change.<br/>`);
+                            if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
+                                actorLogs.push(`${boldActorName}: No Downtime Cost.<br/>`);
                             } else {
                                 const currentGold = actorBank.system.quantity.value;
                                 const newGold = currentGold - bankedGold;
                                 actorBank.update({system: {quantity: {value: currentGold - bankedGold}}});
-                                actorLogs.push(newGold > 0 ? `${boldActorName}: Bank withdraw from ${currentGold}gp to ${newGold}gp.<br/>`
-                                    : `${boldActorName}: Bank withdraw from ${currentGold}gp to 0 (calculated: ${newGold}).<br/>`);
+                                actorLogs.push(newGold > 0 ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.<br/>`
+                                    : `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to 0 (calculated: ${newGold}).<br/>`);
                             }
                         } else {
                             actorLogs.push(`${boldActorName}: No bank ledger named ${BANK_NAME}<br/>`);
