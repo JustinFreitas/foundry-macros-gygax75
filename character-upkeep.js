@@ -35,11 +35,12 @@ if (document?.getElementById('sheet-data')) {
             const characters = document.getElementsByClassName('character');
             for (let i = 0; i < characters.length; i++) {
                 const actor = partyActors[i];
-                const baseActorName = actor.innerHTML.split('(')[0].trim();
-                characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
+                if (actor) {
+                    const baseActorName = actor.innerText.split('(')[0].trim();
+                    characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
+                }
             }
         }, 0);
-
     }
 </script>
 <form>
