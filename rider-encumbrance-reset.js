@@ -24,7 +24,7 @@ allAnimals.forEach(async animal => {
 
         await animal.createEmbeddedDocuments('Item', [itemClone]);
         await animal.items.getName('Riders Encumbrance').update({system: {quantity: {value: 0}}});
-        actorLogs.push(`<b>${animal.name}:</b> didn't have a Rider Encumbrance item so one was added and set to <b>0</b>.`);
+        actorLogs.push(`<b>${animal.name}:</b> didn't have a Rider Encumbrance item so one was added and set to <b>0</b>.<br/>`);
     } else if (ridersEncumbranceItems.length > 1) {
         ridersEncumbranceItems.forEach((item, index) => {
             if (index === 0) {
@@ -34,12 +34,12 @@ allAnimals.forEach(async animal => {
             }
         });
 
-        actorLogs.push(`<b>${animal.name}:</b> had too many Rider Encumbrance items so all but one were removed and it was set to <b>0</b>.`);
+        actorLogs.push(`<b>${animal.name}:</b> had too many Rider Encumbrance items so all but one were removed and it was set to <b>0</b>.<br/>`);
     } else {
         const origItemEncumbrance = ridersEncumbranceItems[0].system.quantity.value || 0;
         if (origItemEncumbrance !== 0) {
             resetItemToZero(ridersEncumbranceItems[0]);
-            actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item reset to <b>0</b> from <b>${origItemEncumbrance}</b>.`);
+            actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item reset to <b>0</b> from <b>${origItemEncumbrance}</b>.<br/>`);
         }
     }
 });
