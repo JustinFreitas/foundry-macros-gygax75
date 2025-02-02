@@ -15,17 +15,18 @@ partyActors.forEach(actor => {
         });
 
         if (ridersEncumbranceItems.length === 0) {
-            console.log(`${animal.name} doesn't have a Riders Encumbrance item.`);
             actorLogs.push(`<b>${animal.name} doesn't have a Riders Encumbrance item.<br/>`);
         } else if (ridersEncumbranceItems.length > 1) {
-            console.log(`${animal.name} has too many Riders Encumbrance items.`);
             actorLogs.push(`<b>${animal.name} has too many Riders Encumbrance items.<br/>`);
         } else {
             const actorEncumbrance = actor.system.encumbrance.value;
             const origItemEncumbrance = ridersEncumbranceItems[0].system.quantity.value;
-            console.log(`${actor.name} encumbrance is ${actorEncumbrance}.  Animal ${animal.name} current encumbrance:`, origItemEncumbrance || undefined);
-            ridersEncumbranceItems[0].update({system: {quantity: {value: actorEncumbrance}}});
-            actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item set to <b>${actorEncumbrance}</b> from <b>${origItemEncumbrance}</b>.<br/>`);
+            if (actorEncumbrance !== origItemEncumbrance) {
+                ridersEncumbranceItems[0].update({system: {quantity: {value: actorEncumbrance}}});
+                actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item set to <b>${actorEncumbrance}</b> from <b>${origItemEncumbrance}</b>.<br/>`);
+            } else {
+                actorLogs.push(`<b>${animal.name}:</b> already had its Rider Encumbrance item set correctly to <b>${actorEncumbrance}</b>.<br/>`);
+            }
         }
     });
 
