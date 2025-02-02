@@ -64,9 +64,7 @@ if (document?.getElementById('sheet-data')) {
                     </div>
                `);
     });
-
     formHtml.push('</form>');
-
     new Dialog({
         title: "Character Upkeep Deductions",
         content: formHtml.join('\n'),
@@ -76,10 +74,11 @@ if (document?.getElementById('sheet-data')) {
                 callback: (html) => {
                     const BANK_NAME = 'GP (Bank)';
                     const characters = html.find('input.character');
+                    const retainedActors = partyActors.filter(actor => !actor.system.retainer?.enabled);
                     const actorLogs = [];
                     actorLogs.push('<h2>Character Upkeep Report</h2>');
                     for (let i = 0; i < characters.length; i++) {
-                        const actor = partyActors[i];
+                        const actor = retainedActors[i];
                         const bankedGold = characters[i].value;
                         const actorBank = actor.items.getName(BANK_NAME);
                         const boldActorName = `<strong>${actor.name}</strong>`;
