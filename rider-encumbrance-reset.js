@@ -2,17 +2,15 @@ function resetItemToZero(item) {
     item.update({system: {quantity: {value: 0}}});
 }
 
-const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
 const actorLogs = []
 actorLogs.push('<h2>Rider Encumbrance Reset Report</h2>');
-const allAnimals = game.actors.filter(a => ['Riding Horse', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
+const allAnimals = game.actors.filter(a => ['Riding Horse', 'War Horse'].includes(a.system.details.class));
 allAnimals.forEach(async animal => {
     const ridersEncumbranceItems = animal.items.filter(item => {
         return item.name === 'Riders Encumbrance';
     });
 
     if (ridersEncumbranceItems.length === 0) {
-        console.log(`${animal.name} doesn't have a Riders Encumbrance item.`);
         let itemClone = game.items.getName('Riders Encumbrance');
         if (!itemClone) {
             itemClone = {
@@ -24,12 +22,10 @@ allAnimals.forEach(async animal => {
             };
         }
 
-        console.log(itemClone);
         await animal.createEmbeddedDocuments('Item', [itemClone]);
         await animal.items.getName('Riders Encumbrance').update({system: {quantity: {value: 0}}});
-
+        actorLogs.push(`<b>${animal.name}:</b> didn't have a Rider Encumbrance item so one was added and set to <b>0</b>.`);
     } else if (ridersEncumbranceItems.length > 1) {
-        console.log(`${animal.name} has too many Riders Encumbrance items, resetting all to zero.`);
         ridersEncumbranceItems.forEach((item, index) => {
             if (index === 0) {
                 resetItemToZero(item);
@@ -37,15 +33,22 @@ allAnimals.forEach(async animal => {
                 item.delete();
             }
         });
+
+        actorLogs.push(`<b>${animal.name}:</b> had too many Rider Encumbrance items so all but one were removed and it was set to <b>0</b>.`);
     } else {
         const origItemEncumbrance = ridersEncumbranceItems[0].system.quantity.value || 0;
-        console.log(`Animal ${animal.name} encumbrance before resetting to zero:`, origItemEncumbrance);
-        resetItemToZero(ridersEncumbranceItems[0]);
-        actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item reset to <b>0</b> from <b>${origItemEncumbrance}</b>.`);
+        if (origItemEncumbrance !== 0) {
+            resetItemToZero(ridersEncumbranceItems[0]);
+            actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item reset to <b>0</b> from <b>${origItemEncumbrance}</b>.`);
+        }
     }
 });
 
-// const chatMessage = actorLogs.join('<br/>');
-// ChatMessage.create({
-//     content: chatMessage,
-// });
+if (actorLogs.length === 1) {
+    actorLogs.push('No rideable animals needed reset.');
+}
+
+const chatMessage = actorLogs.join('<br/>');
+ChatMessage.create({
+    content: chatMessage,
+});
