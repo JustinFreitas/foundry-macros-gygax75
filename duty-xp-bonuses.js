@@ -63,15 +63,15 @@ formHtml.push(`
                 label: "Apply Bonuses",
                 callback: (html) => {
                     const requestUserSelectElement = document.getElementById('request-user-select');
-                    console.log(`Request User Name: ${requestUserSelectElement.options[requestUserSelectElement.selectedIndex].text}  User ID: ${requestUserSelectElement.value}`);
+                    console.log(`Request User Name: ${requestUserSelectElement.options[requestUserSelectElement.selectedIndex]?.text}  User ID: ${requestUserSelectElement.value}`);
                     const callerUserSelectElement = document.getElementById('caller-user-select');
-                    console.log(`Caller User Name: ${callerUserSelectElement.options[callerUserSelectElement.selectedIndex].text}  User ID: ${callerUserSelectElement.value}`);
+                    console.log(`Caller User Name: ${callerUserSelectElement.options[callerUserSelectElement.selectedIndex]?.text}  User ID: ${callerUserSelectElement.value}`);
                     const mapperUserSelectElement = document.getElementById('mapper-user-select');
-                    console.log(`Mapper User Name: ${mapperUserSelectElement.options[mapperUserSelectElement.selectedIndex].text}  User ID: ${mapperUserSelectElement.value}`);
+                    console.log(`Mapper User Name: ${mapperUserSelectElement.options[mapperUserSelectElement.selectedIndex]?.text}  User ID: ${mapperUserSelectElement.value}`);
                     const selectedPlayersSet = new Set([
-                        requestUserSelectElement.options[requestUserSelectElement.selectedIndex].text,
-                        callerUserSelectElement.options[callerUserSelectElement.selectedIndex].text,
-                        mapperUserSelectElement.options[mapperUserSelectElement.selectedIndex].text
+                        requestUserSelectElement.options[requestUserSelectElement.selectedIndex]?.text,
+                        callerUserSelectElement.options[callerUserSelectElement.selectedIndex]?.text,
+                        mapperUserSelectElement.options[mapperUserSelectElement.selectedIndex]?.text
                     ]);
                     
                     const selectedPlayers = [...selectedPlayersSet];
