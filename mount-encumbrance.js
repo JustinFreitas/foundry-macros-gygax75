@@ -7,9 +7,13 @@ const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true)
 const updatedAnimalSpeeds = [];
 let slowestSpeed = 240;
 partyActors.forEach(actor => {
-    // Find the animals, could be several.
     const baseActorName = actor.name.split('(')[0].trim();
-    const actorAnimals = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'Mule', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
+    let actorAnimals = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'Mule', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
+    const actorRidingMounts = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
+    if (actorRidingMounts.length > 1) {
+        updatedAnimalSpeeds.push(`<b>${baseActorName} - More than one riding mount found -</b> ${actorRidingMounts.map(a => a.name).join(", ")}.`);
+    }
+
     actorAnimals.forEach(animal => {
         let speed = 0;
         switch (animal.system.details.class) {
@@ -29,7 +33,7 @@ partyActors.forEach(actor => {
 
         slowestSpeed = Math.min(slowestSpeed, speed);
         animal.update({system: {movement: {base: speed}}});
-        updatedAnimalSpeeds.push(`<b>${animal.name} - ${animal.system.details.class}:</b>Encumbrance is ${animal.system.encumbrance.value}/${animal.system.encumbrance.max}cns, movement is ${speed}'.`);
+        updatedAnimalSpeeds.push(`<b>${animal.name} - ${animal.system.details.class}:</b> Encumbrance is ${animal.system.encumbrance.value}/${animal.system.encumbrance.max}cns, movement is ${speed}'.`);
     });
 });
 
