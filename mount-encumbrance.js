@@ -8,8 +8,9 @@ const updatedAnimalSpeeds = [];
 let slowestSpeed = 240;
 partyActors.forEach(actor => {
     const baseActorName = actor.name.split('(')[0].trim();
-    let actorAnimals = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'Mule', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
-    const actorRidingMounts = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'War Horse', 'Draft Horse'].includes(a.system.details.class));
+    const actorBeastsOfBurden = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Mule', 'Draft Horse'].includes(a.system.details.class));
+    const actorRidingMounts = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'War Horse'].includes(a.system.details.class));
+    const actorAnimals = actorRidingMounts.concat(actorBeastsOfBurden);
     if (actorRidingMounts.length > 1) {
         updatedAnimalSpeeds.push(`<b>${baseActorName} - More than one riding mount found -</b> ${actorRidingMounts.map(a => a.name).join(", ")}.`);
     }
