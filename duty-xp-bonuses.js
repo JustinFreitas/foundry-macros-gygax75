@@ -75,7 +75,7 @@ formHtml.push(`
                     ]);
                     
                     const selectedPlayers = [...selectedPlayersSet];
-                    const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+                    const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && !actor.system.retainer?.enabled && actor.system.details.class !== 'Mule');
                     const actorLogs = [];
                     actorLogs.push('<h2>Duty XP Report</h2>');
                     partyActors.forEach(actor => {
@@ -111,12 +111,12 @@ formHtml.push(`
                             };
 
                             const dutiesLength = flagsObj.dutyXP.duties.length;
-                            const newXpBonus = origXpBonus + ((dutiesLength || 0) * 5); 
+                            const newXpBonus = origXpBonus + Math.min((dutiesLength || 0) * 5, 5); 
                             console.log(`New XP Bonus: ${newXpBonus}`);
                             const systemObj = {
                                 details: {
                                     xp: {
-                                        bonus: origXpBonus + ((dutiesLength || 0) * 5)
+                                        bonus: newXpBonus
                                     }
                                 }
                             };
