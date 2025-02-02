@@ -18,6 +18,10 @@ game.actors.forEach(actor => {
     });
 });
 
+if (actorLogs.length === 1) {
+    actorLogs.push('No phantom items found.');
+}
+
 const chatMessage = actorLogs.join('<br/>');
 ChatMessage.create({
     content: chatMessage,
