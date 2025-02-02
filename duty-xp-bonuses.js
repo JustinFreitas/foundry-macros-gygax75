@@ -1,7 +1,7 @@
 if (document?.getElementById('duty-xp-bonuses')) {
     console.log('Duty XP Bonuses Window Already Open');
 } else {
-    const users = game.users.filter(user => user.hasPlayerOwner);
+    const users = game.users.filter(user => user.hasPlayerOwner && user.active);
     const formHtml = [];
     formHtml.push(`
 <form id="duty-xp-bonuses">
