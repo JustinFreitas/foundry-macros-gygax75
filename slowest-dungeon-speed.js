@@ -8,5 +8,5 @@ partyActors.forEach(actor => {
 
 const slowestSpeed = Math.min(...speedToActorMap.keys());
 const actorsWithSlowestSpeed = speedToActorMap.get(slowestSpeed);
-const output = `The party's slowest speed is <b>${slowestSpeed}ft</b> per turn.<br/><br/>Characters: ${actorsWithSlowestSpeed.map(a => a.name).join(", ")}`;
-ChatMessage.create({content: '<h2>Dungeon Speed Report</h2>' + output});
+const output = `The party's slowest speed is <b>${slowestSpeed}ft</b> / <b>${slowestSpeed/5} miles</b> per turn.<br/><br/>Characters: ${actorsWithSlowestSpeed.map(a => a.name).join(", ")}`;
+ChatMessage.create({content: '<h2>Character Speed Report</h2>' + output});
