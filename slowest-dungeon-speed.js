@@ -1,7 +1,12 @@
+function getSpeed(animal, fastRate, slowRate) {
+    return animal.system.encumbrance.value > animal.system.encumbrance.max ? 0
+        : animal.system.encumbrance.value <= (animal.system.encumbrance.max / 2) ? fastRate : slowRate;
+}
+
 const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
 const speedToActorMap = new Map();
 partyActors.forEach(actor => {
-    const actorSpeed = actor.system.movement.base;
+    const actorSpeed = actor.system.details.class === 'Mule'? getSpeed(actor, 120, 60) : actor.system.movement.base;
     const charsWithSpeed = speedToActorMap.get(actorSpeed) || [];
     speedToActorMap.set(actorSpeed, [actor, ...charsWithSpeed].sort((a, b) => ('' + a.name).localeCompare('' + b.name)));
 });
