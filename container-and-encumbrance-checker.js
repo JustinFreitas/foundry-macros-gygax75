@@ -1,4 +1,27 @@
-const violations = [];
+function isWhiteListedTopLevelItem(item) {
+    return item.name.startsWith('Case')
+        || item.name.endsWith('Cloak')
+        || item.name.startsWith('Gauntlets')
+        || item.name.startsWith('Girdle')
+        || item.name.startsWith('Helm')
+        || item.name.startsWith('Medallion')
+        || item.name.startsWith('Quiver')
+        || item.name.endsWith('Ring')
+        || item.name.startsWith('Ring')
+        || [
+            'Elven Cloak and Boots',
+            'GP (Bank)',
+            'Holy symbol',
+            'Lantern',
+            'Oil flask',
+            'Saddle and Bridle',
+            'Scarab of Protection',
+            'Torch',
+            'Waterskin'
+            ].includes(item.name);
+}
+
+const nameToViolationsMap = new Map();
 const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true)
 for (let i = 0; i < partySheetActors.length; i++) {
     const actor = partySheetActors[i];
@@ -8,9 +31,8 @@ for (let i = 0; i < partySheetActors.length; i++) {
         const pattern = /^.*\(\s*(?<capacity>\d+)\s*\)\s*$/gm;
         const matches = pattern.exec(container.name);
         if (+matches?.groups?.capacity < container.system.totalWeight) {
-            const violation = `<b>${actor.name}:</b> ${container.name}, Capacity: ${matches.groups.capacity}cns, Weight: ${container.system.totalWeight}cns`;
-            console.log(violation);
-            violations.push(violation);
+            const violation = `${container.name}, ${container.system.totalWeight}cns`;
+            nameToViolationsMap.set(actor.name, [...nameToViolationsMap.get(actor.name) ? nameToViolationsMap.get(actor.name) : [], violation]);
         }
     }
 
@@ -18,21 +40,34 @@ for (let i = 0; i < partySheetActors.length; i++) {
     for (let j = 0; j < treasures.length; j++) {
         const treasure = treasures[j];
         if (!treasure.name.includes('(Bank)')) {
-            const violation = `<b>${actor.name}:</b> has unstored treasure ${treasure.name}.`
-            console.log(violation);
-            violations.push(violation);
+            const violation = `unstored treasure ${treasure.name}`;
+            nameToViolationsMap.set(actor.name, [...nameToViolationsMap.get(actor.name) ? nameToViolationsMap.get(actor.name) : [], violation]);
         }
     }
 
+    const foundItems = actor.items.filter(item => item.type === 'item'
+                                            && !isWhiteListedTopLevelItem(item)
+                                            && !item.system.containerId
+                                            && !item.system.treasure);
+
+    foundItems.forEach(item => {
+        const violation = `misc item ${item.name}`;
+        nameToViolationsMap.set(actor.name, [...nameToViolationsMap.get(actor.name) ? nameToViolationsMap.get(actor.name) : [], violation]);
+    });
+
     if (actor.system.encumbrance.value > actor.system.encumbrance.max) {
-        const violation = `<b>${actor.name}:</b> Over encumbered  ${actor.system.encumbrance.value}/${actor.system.encumbrance.max}.`
-        console.log(violation);
-        violations.push(violation);
+        const violation = `over encumbered  ${actor.system.encumbrance.value}/${actor.system.encumbrance.max}`;
+        nameToViolationsMap.set(actor.name, [...nameToViolationsMap.get(actor.name) ? nameToViolationsMap.get(actor.name) : [], violation]);
     }
 }
 
-if (violations.length > 0) {
-    ChatMessage.create({content: '<h2>Overfilled Container Report</h2><br/>' + violations.join('<br/><br/>')});
+if (nameToViolationsMap.keys().toArray().length > 0) {
+    const collatedViolations = [];
+    nameToViolationsMap.keys().forEach(actorName => {
+        collatedViolations.push(`<b>${actorName}:</b>  ${nameToViolationsMap.get(actorName).sort().join(", ")}<br/>`);
+    });
+
+    ChatMessage.create({content: '<h2>Overfilled Container Report</h2>' + collatedViolations.join('<br/>')});
 } else {
     ChatMessage.create({content: '<h2>Overfilled Container Report</h2><br/>No Storage or Treasure violations found in party.'});
 }
