@@ -29,8 +29,7 @@ partyActors.forEach(actor => {
 
         if (newName) {
             item.update({name: newName});
-            const rationUpdate = `${item.name} changed to ${newName}`;
-            nameToRationsMap.set(actor.name, [...nameToRationsMap.get(actor.name) ? nameToRationsMap.get(actor.name) : [], rationUpdate]);        
+            nameToRationsMap.set(actor.name, [...nameToRationsMap.get(actor.name) ? nameToRationsMap.get(actor.name) : [], newName]);
         }
     });
 });
