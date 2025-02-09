@@ -3,7 +3,7 @@ game.actors.filter(actor => !actor.flags['item-piles']?.data?.enabled)
            .forEach(actor => {
                 const foundItems = actor.items.filter(item => item.type === 'item' && item.name.includes('(Found)'));
                 foundItems.forEach(item => {
-                    const found = `<b>${actor.name}:</b> ${item.name}`;
+                    const found = `<b>${actor.name}:</b> ${item.system.quantity.value || 0} ${item.name}`;
                     console.log(found);
                     allFoundItems.push(found);
            });
