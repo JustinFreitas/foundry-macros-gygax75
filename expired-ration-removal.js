@@ -1,5 +1,5 @@
 const violations = [];
-const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true)
+const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true);
 for (let i = 0; i < partySheetActors.length; i++) {
     const actor = partySheetActors[i];
     actor.items.forEach(item => {
