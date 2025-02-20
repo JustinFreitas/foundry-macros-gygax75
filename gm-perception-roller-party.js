@@ -15,7 +15,10 @@ let content = `<strong>Group Perception Roller</strong>
             <th style="text-align:center">Roll + Mod</th>
             <th style="text-align:center">Total</th>
         </tr>`;
-for ( const t of canvas.tokens.placeables) {
+
+//const tokens = canvas.tokens.placeables;
+const tokens = game.actors.filter(actor => actor.flags.ose?.party === true).map(a => ({actor: a, id: a.id, name: a.name}));
+for ( const t of tokens ) {
     if ( !t.actor ) {
         ui.notifications.error(`Token named '${t.name}' with id '${t.id}' has no actor data!`);
         continue;
