@@ -3,14 +3,14 @@ function getSpeed(animal, fastRate, slowRate) {
         : animal.system.encumbrance.value <= (animal.system.encumbrance.max / 2) ? fastRate : slowRate;
 }
 
-const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details.class !== 'Mule');
+const actorBeastsOfBurden = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details.class === 'Mule');
 const updatedAnimalSpeeds = [];
 let slowestSpeed = 240;
 partyActors.forEach(actor => {
     const baseActorName = actor.name.split('(')[0].trim();
-    const actorBeastsOfBurden = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Mule', 'Draft Horse'].includes(a.system.details.class));
     const actorRidingMounts = game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'War Horse'].includes(a.system.details.class));
-    const actorAnimals = actorRidingMounts.concat(actorBeastsOfBurden);
+    const actorAnimals = actorRidingMounts;
     if (actorRidingMounts.length > 1) {
         updatedAnimalSpeeds.push(`<b>${baseActorName} - More than one riding mount found -</b> ${actorRidingMounts.map(a => a.name).join(", ")}.`);
     }
@@ -36,6 +36,28 @@ partyActors.forEach(actor => {
         animal.update({system: {movement: {base: speed}}});
         updatedAnimalSpeeds.push(`<b>${animal.name} - ${animal.system.details.class}:</b> Encumbrance is ${animal.system.encumbrance.value}/${animal.system.encumbrance.max}cns, movement is ${speed}'.`);
     });
+});
+
+actorBeastsOfBurden.forEach(animal => {
+    let speed = 0;
+    switch (animal.system.details.class) {
+        case 'Riding Horse':
+            speed = getSpeed(animal, 240, 120);
+            break;
+        case 'Mule':
+            speed = getSpeed(animal, 120, 60);
+            break;
+        case 'War Horse':
+            speed = getSpeed(animal, 120, 60);
+            break;
+        case 'Draft Horse':
+            speed = getSpeed(animal, 90, 45);
+            break;
+    }
+
+    slowestSpeed = Math.min(slowestSpeed, speed);
+    animal.update({system: {movement: {base: speed}}});
+    updatedAnimalSpeeds.push(`<b>${animal.name} - ${animal.system.details.class}:</b> Encumbrance is ${animal.system.encumbrance.value}/${animal.system.encumbrance.max}cns, movement is ${speed}'.`);
 });
 
 if (updatedAnimalSpeeds.length > 0) {
