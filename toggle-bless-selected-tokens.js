@@ -1,4 +1,4 @@
-const BLESS_EFFECT_NAME = 'bless';
+const BLESS_EFFECT_NAME = 't0R8wcEIg4ybbn3k';
 const tokens = canvas.tokens.controlled;
 const nameToBonusAndWeaponsTupleMap = new Map();
 tokens.forEach(token => {
