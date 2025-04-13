@@ -42,6 +42,11 @@ allAnimals.forEach(async animal => {
             actorLogs.push(`<b>${animal.name}:</b> had its Rider Encumbrance item reset to <b>0</b> from <b>${origItemEncumbrance}</b>.<br/>`);
         }
     }
+
+    const nonDefaultItems = animal.items.filter(i => !['Saddle Bags (1000)', 'Rider', 'Small Sized Rider', 'Riders Encumbrance', 'Saddle and Bridle'].includes(i.name));
+    if (nonDefaultItems.length > 0) {
+        actorLogs.push(`<b>${animal.name}:</b> has non-default items that need to be cleaned up.<br/>`);
+    }
 });
 
 if (actorLogs.length === 1) {
