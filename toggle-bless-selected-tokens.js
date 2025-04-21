@@ -9,7 +9,7 @@ tokens.forEach(token => {
     // Alter bonus on weapons.
     actor.items.filter(i=>i.type==='weapon').forEach(item => {
         item.update({system: {bonus: item.system.bonus + bonus}});
-        weapons.push(item.name);
+        weapons.push(`${item.name} (${item.system.bonus + bonus})`);
     });
 
     nameToBonusAndWeaponsTupleMap.set(actor.name, { bonus: bonus, weapons: weapons });
