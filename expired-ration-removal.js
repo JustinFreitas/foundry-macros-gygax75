@@ -3,7 +3,7 @@ const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === 
 for (let i = 0; i < partySheetActors.length; i++) {
     const actor = partySheetActors[i];
     actor.items.forEach(item => {
-        const found = item.name.match(/rations, (iron|standard) \((?<date>[^)]+)\)/i);
+        const found = item.name.match(/rations, (iron|standard|fresh food|preserved meat) \((?<date>[^)]+)\)/i);
         if (found?.groups?.date) {
             const rationDate = new Date(found.groups.date);
             let todayDate = new Date(new Date().toDateString());
