@@ -7,6 +7,7 @@ function isWhiteListedTopLevelItem(item) {
         || item.name.startsWith('Medallion')
         || item.name.startsWith('Quiver')
         || item.name.startsWith('Ration')
+        || item.name.startsWith('Rider')
         || item.name.endsWith('Ring')
         || item.name.startsWith('Ring')
         || [
@@ -23,9 +24,16 @@ function isWhiteListedTopLevelItem(item) {
 }
 
 const nameToViolationsMap = new Map();
-const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true)
-for (let i = 0; i < partySheetActors.length; i++) {
-    const actor = partySheetActors[i];
+const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+// Get partysheet actor mounts also for the container check.
+const actorMounts = partySheetActors.filter(actor => actor.system.details.class !== 'Mule').flatMap(actor => {
+    const baseActorName = actor.name.split('(')[0].trim();
+    return game.actors.search({query: `(${baseActorName})`}).filter(a => ['Riding Horse', 'War Horse'].includes(a.system.details.class));
+});
+
+const partySheetActorsWithMounts = partySheetActors.concat(actorMounts);
+for (let i = 0; i < partySheetActorsWithMounts.length; i++) {
+    const actor = partySheetActorsWithMounts[i];
     const containers = actor.system.containers;
     for (let j = 0; j < containers.length; j++) {
         const container = containers[j];
