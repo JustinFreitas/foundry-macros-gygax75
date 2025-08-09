@@ -1,10 +1,10 @@
-const BLESS_EFFECT_NAME = 't0R8wcEIg4ybbn3k';
+const blessEffectId = CONFIG.statusEffects.find((el)=>el.name?.includes('Bless'))?.id || 'bless';
 const tokens = canvas.tokens.controlled;
 const nameToBonusAndWeaponsTupleMap = new Map();
 tokens.forEach(token => {
     const actor = token.actor;
-    let bonus = actor.statuses.has(BLESS_EFFECT_NAME) ? -1 : 1;
-    actor.toggleStatusEffect(BLESS_EFFECT_NAME);
+    let bonus = actor.statuses.has(blessEffectId) ? -1 : 1;
+    actor.toggleStatusEffect(blessEffectId);
     const weapons = [];
     // Alter bonus on weapons.
     actor.items.filter(i=>i.type==='weapon').forEach(item => {
