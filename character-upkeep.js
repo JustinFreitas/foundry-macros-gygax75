@@ -32,12 +32,13 @@ if (document?.getElementById('sheet-data')) {
             const sheetDataRaw = document.getElementById('sheet-data').value;
             const sheetDataGrid = sheetDataRaw.split(\'\\n\').map(line => line.split(\'\\t\'));
             const partyActors = document.getElementsByClassName('actor-name');
-            const characters = document.getElementsByClassName('character');
+            const characters = document.querySelectorAll('input.character');
             for (let i = 0; i < characters.length; i++) {
                 const actor = partyActors[i];
                 if (actor) {
                     const baseActorName = actor.innerText.split('(')[0].trim();
                     characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
+                    console.log('Setting upkeep for ' + baseActorName + ' to ' + characters[i].value);
                 }
             }
         }, 0);
