@@ -1,7 +1,5 @@
 const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details.class !== 'Mule');
 const actorLogs = [];
-actorLogs.push('<h2>Dungeon Bests Report</h2>');
-
 const listenDoorValueToNameArrayMap = new Map();
 const openDoorValueToNameArrayMap = new Map();
 const secretDoorValueToNameArrayMap = new Map();
@@ -27,7 +25,7 @@ if (partyActors.length === 0) {
     actorLogs.push(`<b>Find Traps:</b> ${Math.max(...findTrapsValueToNameArrayMap.keys().toArray())} - ${findTrapsValueToNameArrayMap.get(findTrapsMaxValue).sort().join(", ")}<br/>`);
 }
 
-const chatMessage = actorLogs.join('<br/>');
+const chatMessage = '<h3>Dungeon Bests Report</h3>' + actorLogs.join('<br/>');
 ChatMessage.create({
     content: chatMessage,
 });
