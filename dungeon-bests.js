@@ -7,12 +7,12 @@ const openDoorValueToNameArrayMap = new Map();
 const secretDoorValueToNameArrayMap = new Map();
 const findTrapsValueToNameArrayMap = new Map();
 
-partyActors.forEach(actor => {
+for (const actor of partyActors) {
     listenDoorValueToNameArrayMap.set(actor.system.exploration.ld || 0, [actor.name, ...(listenDoorValueToNameArrayMap.get(actor.system.exploration.ld || 0) || [])]);
     openDoorValueToNameArrayMap.set(actor.system.exploration.od || 0, [actor.name, ...(openDoorValueToNameArrayMap.get(actor.system.exploration.od || 0) || [])]);
     secretDoorValueToNameArrayMap.set(actor.system.exploration.sd || 0, [actor.name, ...(secretDoorValueToNameArrayMap.get(actor.system.exploration.sd || 0) || [])]);
     findTrapsValueToNameArrayMap.set(actor.system.exploration.ft || 0, [actor.name, ...(findTrapsValueToNameArrayMap.get(actor.system.exploration.ft || 0) || [])]);
-});
+}
 
 if (partyActors.length === 0) {
     actorLogs.push('No party members to check for best abilities.');
