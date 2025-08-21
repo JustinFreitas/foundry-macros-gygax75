@@ -22,7 +22,7 @@ if (nameToItemsMap.keys().toArray().length > 0) {
         collatedItems.push(`<b>${actorName}:</b>  ${nameToItemsMap.get(actorName).sort().join(", ")}<br/>`);
     }
 
-    ChatMessage.create({content: '<h2>Found Treasure Report</h2>' + collatedItems.join('<br/>')});
+    ChatMessage.create({content: '<h4>Found Treasure Report</h4>' + collatedItems.join('<br/>')});
 } else {
-    ChatMessage.create({content: '<h2>Found Treasure Report</h2><br/>No (Found) items in any actor.'});
+    ChatMessage.create({content: '<h4>Found Treasure Report</h4><br/>No (Found) items in any actor.'});
 }
