@@ -6,7 +6,6 @@ function isWhiteListedTopLevelItem(item) {
         || item.name.startsWith('Helm')
         || item.name.startsWith('Medallion')
         || item.name.startsWith('Quiver')
-        || item.name.startsWith('Ration')
         || item.name.startsWith('Rider')
         || item.name.endsWith('Ring')
         || item.name.startsWith('Ring')
