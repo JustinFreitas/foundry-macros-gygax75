@@ -29,6 +29,6 @@ if (nameToItemsMap.keys().toArray().length > 0) {
 } else {
     ChatMessage.create({
         content:
-            "<h4>Found Treasure Report</h4><br/>No (Found) items in any actor.",
+            "<h4>Found Treasure Report</h4>No (Found) items in any actor.",
     });
 }

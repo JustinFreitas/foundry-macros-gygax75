@@ -24,5 +24,5 @@ if (nameToItemsMap.keys().toArray().length > 0) {
 
     ChatMessage.create({content: '<h4>Found Treasure Report</h4>' + collatedItems.join('<br/>')});
 } else {
-    ChatMessage.create({content: '<h4>Found Treasure Report</h4><br/>No (Found) items in any actor.'});
+    ChatMessage.create({content: '<h4>Found Treasure Report</h4>No (Found) items in any actor.'});
 }
