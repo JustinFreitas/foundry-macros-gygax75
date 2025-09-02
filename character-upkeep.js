@@ -80,16 +80,17 @@ if (document?.getElementById('sheet-data')) {
                     actorLogs.push('<h2>Character Upkeep Report</h2>');
                     for (let i = 0; i < characters.length; i++) {
                         const actor = retainedActors[i];
-                        const bankedGold = characters[i].value;
+                        let bankedGold = characters[i].value;
                         const actorBank = actor.items.getName(BANK_NAME);
                         const boldActorName = `<strong>${actor.name}</strong>`;
                         if (actorBank) {
                             if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
                                 actorLogs.push(`${boldActorName}: No Downtime Cost.<br/>`);
                             } else {
-                                const currentGold = actorBank.system.quantity.value;
-                                const newGold = currentGold - bankedGold;
-                                actorBank.update({system: {quantity: {value: currentGold - bankedGold}}});
+                                bankedGold = Math.ceil(+bankedGold);
+                                const currentGold = Math.ceil(+actorBank.system.quantity.value);
+                                const newGold = Math.ceil(currentGold - bankedGold);
+                                actorBank.update({system: {quantity: {value: newGold}}});
                                 actorLogs.push(newGold > 0 ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.<br/>`
                                     : `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to 0 (calculated: ${newGold}).<br/>`);
                             }
