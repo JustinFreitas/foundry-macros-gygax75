@@ -1,5 +1,23 @@
+// Get all scenes that include "expedition" in their name (case-insensitive)
+const expeditionScenes = game.scenes.filter(scene => scene.name.toLowerCase().includes("expedition"));
+
+// Create a Set of actor IDs that have tokens in those scenes
+const actorsInExpedition = new Set();
+
+for (const scene of expeditionScenes) {
+  for (const token of scene.tokens) {
+    if (token.actorId) actorsInExpedition.add(token.actorId);
+  }
+}
+
+// Example: Filter a list of actors to exclude those already in expedition scenes
+const eligibleActors = game.actors.filter(actor => !actorsInExpedition.has(actor.id));
+
+// Do something with eligibleActors
+console.log("Actors not in expedition scenes:", eligibleActors.map(a => a.name));
+
 const violations = [];
-for (const actor of game.actors) {
+for (const actor of eligibleActors) {
     for (const item of actor.items) {
         const found = item.name.match(/rations, (iron|standard|fresh food|preserved meat) \((?<date>[^)]+)\)/i);
         if (found?.groups?.date) {
