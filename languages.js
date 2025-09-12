@@ -9,7 +9,8 @@ for (const actor of partySheetActors) {
 let content = '<h4>Party Languages</h4>'
 if (languageToActorsMap.keys().toArray().length > 0) {
     const collatedResults = [];
-    for (const language of languageToActorsMap.keys()) {
+    const sortedLanguages = Array.from(languageToActorsMap.keys()).sort((a, b) => a.localeCompare(b));
+    for (const language of sortedLanguages) {
         const actors = languageToActorsMap.get(language).map(a => a.name).sort().join(', ');
         collatedResults.push(`<b>${language}:</b>  ${actors}<br/>`);
     }
