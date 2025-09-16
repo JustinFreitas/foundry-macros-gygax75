@@ -5,6 +5,15 @@ if (document?.getElementById('sheet-data')) {
     const formHtml = [];
     formHtml.push(`
 <script type="text/javascript">
+    function rollXdYSum(numberOfDice, dieSize) {
+        let total = 0;
+        for (let i = 0; i < numberOfDice; i++) {
+            const roll = Math.floor(Math.random() * dieSize) + 1;
+            total += roll;
+        }
+        return total;
+    }
+  
     function findCharacterInSheet(twoDimensionalArray, nameToFind) {
         for (let row = 0; row < twoDimensionalArray.length; row++) {
             for (let col = 0; col < twoDimensionalArray[row].length; col++) {
@@ -26,6 +35,16 @@ if (document?.getElementById('sheet-data')) {
         return twoDimensionalArray[characterCoords.row + 20][characterCoords.col + 1].split('gp')[0].trim();
     }
 
+    function findHealingForCharacterInSheet(twoDimensionalArray, nameToFind, defaultValue) {
+        const characterCoords = findCharacterInSheet(twoDimensionalArray, nameToFind);
+        if (characterCoords === undefined) {
+            return defaultValue;
+        }
+
+        const rollComponents = twoDimensionalArray[characterCoords.row + 5][characterCoords.col + 1].trim().split('d');
+        return rollComponents.length === 2 ? rollXdYSum(rollComponents[0], rollComponents[1]) : defaultValue;
+    }
+
     function onPasteTextArea() {
         // Use setTimeout so that the pasted text can actually get there before referencing it.
         setTimeout(() => {
@@ -33,12 +52,14 @@ if (document?.getElementById('sheet-data')) {
             const sheetDataGrid = sheetDataRaw.split(\'\\n\').map(line => line.split(\'\\t\'));
             const partyActors = document.getElementsByClassName('actor-name');
             const characters = document.querySelectorAll('input.character');
+            const heals = document.querySelectorAll('input.heal');
             for (let i = 0; i < characters.length; i++) {
                 const actor = partyActors[i];
                 if (actor) {
                     const baseActorName = actor.innerText.split('(')[0].trim();
                     characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
-                    console.log('Setting upkeep for ' + baseActorName + ' to ' + characters[i].value);
+                    heals[i].value = findHealingForCharacterInSheet(sheetDataGrid, baseActorName, 0);
+                    console.log('Setting upkeep for ' + baseActorName + ' to ' + characters[i].value + ' and heal to ' + heals[i].value);
                 }
             }
         }, 0);
@@ -52,7 +73,8 @@ if (document?.getElementById('sheet-data')) {
     <div>
         <p>To initialize the upkeep values for the party actors below, you can paste the Characters in the world spreadsheet data in the text area above.
         Go to sheet and Ctrl-A to select all, then Ctrl-C to copy the sheet data.  Then come here, click in the text area, and press Ctrl-V to paste.
-        The fields should initialize with the data from the sheet.</p>
+        The fields should initialize with the data from the sheet.
+        The first column is upkeep gold and the second column is heal HP.</p>
     </div>
 `);
 
@@ -62,6 +84,7 @@ if (document?.getElementById('sheet-data')) {
                     <div class="form-group">
                         <label class="actor-name">${actor.name}</label>
                         <input type="number" class="character" />
+                        <input type="number" class="heal" />
                     </div>
                `);
     });
@@ -80,9 +103,11 @@ if (document?.getElementById('sheet-data')) {
                     actorLogs.push('<h2>Character Upkeep Report</h2>');
                     for (let i = 0; i < characters.length; i++) {
                         const actor = retainedActors[i];
+                        const healAmount = Math.min(actor.system.hp.value + (+html.find('input.heal')[i].value || 0), actor.system.hp.max);
+                        actor.update({system: {hp: {value: healAmount}}});
                         let bankedGold = characters[i].value;
                         const actorBank = actor.items.getName(BANK_NAME);
-                        const boldActorName = `<strong>${actor.name}</strong>`;
+                        const boldActorName = `<strong>${actor.name}</strong> healed to ${healAmount}/${actor.system.hp.max}`;
                         if (actorBank) {
                             if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
                                 actorLogs.push(`${boldActorName}: No Downtime Cost.<br/>`);
