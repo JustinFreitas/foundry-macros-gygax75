@@ -1,19 +1,20 @@
 const blessEffectId = CONFIG.statusEffects.find((el)=>el.name?.includes('Bless'))?.id || 'bless';
 const tokens = canvas.tokens.controlled;
 const nameToBonusAndWeaponsTupleMap = new Map();
-tokens.forEach(token => {
+for (const token of tokens) {
     const actor = token.actor;
     let bonus = actor.statuses.has(blessEffectId) ? -1 : 1;
     actor.toggleStatusEffect(blessEffectId);
     const weapons = [];
     // Alter bonus on weapons.
-    actor.items.filter(i=>i.type==='weapon').forEach(item => {
-        item.update({system: {bonus: item.system.bonus + bonus}});
-        weapons.push(`${item.name} (${item.system.bonus + bonus})`);
-    });
+    const actorWeapons = actor.items.filter(i => i.type === 'weapon');
+    for (const item of actorWeapons) {
+        await item.update({system: {bonus: item.system.bonus + bonus}});
+        weapons.push(`${item.name} (${item.system.bonus})`);
+    }
 
     nameToBonusAndWeaponsTupleMap.set(actor.name, { bonus: bonus, weapons: weapons });
-});
+}
 
 if (nameToBonusAndWeaponsTupleMap.keys().toArray().length > 0) {
     const collatedItems = [];
