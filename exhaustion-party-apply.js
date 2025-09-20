@@ -18,7 +18,7 @@ for (const actor of partySheetActors) {
     }
 
     nameToBonusAndWeaponsTupleMap.set(actor.name, { bonus: bonus, weapons: weapons });
-    actor.toggleStatusEffect(exhaustedEffectId, {active: true});
+    await actor.toggleStatusEffect(exhaustedEffectId, {active: true});
     await actor.update({flags: {ose: {exhausted: true}}});
 }
 
