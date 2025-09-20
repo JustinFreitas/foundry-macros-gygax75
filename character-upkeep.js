@@ -32,7 +32,7 @@ if (document?.getElementById('sheet-data')) {
             return defaultValue;
         }
 
-        return twoDimensionalArray[characterCoords.row + 20][characterCoords.col + 1].split('gp')[0].trim();
+        return twoDimensionalArray[characterCoords.row + 21][characterCoords.col + 1].split('gp')[0].trim();
     }
 
     function findHealingForCharacterInSheet(twoDimensionalArray, nameToFind, defaultValue) {
