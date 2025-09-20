@@ -4,7 +4,7 @@ const nameToBonusAndWeaponsTupleMap = new Map();
 for (const token of tokens) {
     const actor = token.actor;
     let bonus = actor.statuses.has(blessEffectId) ? -1 : 1;
-    actor.toggleStatusEffect(blessEffectId);
+    await actor.toggleStatusEffect(blessEffectId);
     const weapons = [];
     // Alter bonus on weapons.
     const actorWeapons = actor.items.filter(i => i.type === 'weapon');
