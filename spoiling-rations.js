@@ -22,8 +22,8 @@ if (typeof SimpleCalendar !== 'undefined') {
     ironExpirationDateString = expirationDate.toLocaleDateString();
 }
 
-partyActors.forEach(actor => {
-    actor.items.forEach(item => {
+for (const actor of partyActors) {
+    for (const item of actor.items) {
         const foundStandard = item.name.match(/rations, standard \((?<date>[^)]+)\)/i);
         const foundIron = item.name.match(/rations, iron \((?<date>[^)]+)\)/i);
         const foundFreshFood = item.name.match(/rations, fresh food \((?<date>[^)]+)\)/i);
@@ -39,18 +39,19 @@ partyActors.forEach(actor => {
             newName = `Rations, Preserved Meat (${preservedMeatExpirationDateString})`;
         }
 
-        if (newName) {
-            item.update({name: newName});
+        if (newName && !item.flags?.core?.spoiled) {
+            await item.update({name: newName, flags: {core: {spoiled: true}}});
             nameToRationsMap.set(actor.name, [...nameToRationsMap.get(actor.name) ? nameToRationsMap.get(actor.name) : [], newName]);
         }
-    });
-});
+    }
+}
 
-if (nameToRationsMap.keys().toArray().length > 0) {
+const keysArray = Array.from(nameToRationsMap.keys()).sort();
+if (keysArray.length > 0) {
     const collatedRations = [];
-    nameToRationsMap.keys().forEach(actorName => {
+    for (const actorName of keysArray) {
         collatedRations.push(`<b>${actorName}:</b>  ${nameToRationsMap.get(actorName).sort().join(", ")}<br/>`);
-    });
+    }
 
     ChatMessage.create({content: '<h2>Rations Spoiling Report</h2>' + collatedRations.join('<br/>')});
 } else {
