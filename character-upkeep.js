@@ -1,7 +1,12 @@
+async function applyHealingToActor(actor, healValue) {
+    const healAmount = Math.min(actor.system.hp.value + (+healValue || 0), actor.system.hp.max);
+    await actor.update({system: {hp: {value: healAmount}}});
+}
+
 if (document?.getElementById('sheet-data')) {
     console.log('Upkeep Input Window Already Open');
 } else {
-    const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+    const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details?.class !== 'Mule');
     const formHtml = [];
     formHtml.push(`
 <script type="text/javascript">
@@ -77,54 +82,67 @@ if (document?.getElementById('sheet-data')) {
         The first column is upkeep gold and the second column is heal HP.</p>
     </div>
 `);
-
-    partyActors.filter(actor => !actor.system.retainer?.enabled)
-               .forEach(actor => {
-                    formHtml.push(`
-                    <div class="form-group">
-                        <label class="actor-name">${actor.name}</label>
-                        <input type="number" class="character" />
-                        <input type="number" class="heal" />
-                    </div>
-               `);
-    });
+    const pcsInParty = partyActors.filter(actor => !actor.system.retainer?.enabled);
+    const retainersInParty = partyActors.filter(actor => actor.system.retainer?.enabled);
+    for (const actor of pcsInParty) {
+        formHtml.push(`
+            <div class="form-group">
+                <label class="actor-name">${actor.name}</label>
+                <input type="number" class="character" />
+                <input type="number" class="heal" />
+            </div>
+        `);
+    }    
     formHtml.push('</form>');
+    
     new Dialog({
         title: "Character Upkeep Deductions",
         content: formHtml.join('\n'),
         buttons: {
             calculate: {
                 label: "Process Upkeep",
-                callback: (html) => {
+                callback: async (html) => {
                     const BANK_NAME = 'GP (Bank)';
                     const characters = html.find('input.character');
-                    const retainedActors = partyActors.filter(actor => !actor.system.retainer?.enabled);
                     const actorLogs = [];
-                    actorLogs.push('<h2>Character Upkeep Report</h2>');
-                    for (let i = 0; i < characters.length; i++) {
-                        const actor = retainedActors[i];
-                        const healAmount = Math.min(actor.system.hp.value + (+html.find('input.heal')[i].value || 0), actor.system.hp.max);
-                        actor.update({system: {hp: {value: healAmount}}});
+                    actorLogs.push('<h4>Character Upkeep Report</h4>');
+                    for (let i = 0; i < characters.length; i++) {  // characters and pcsInParty should be same length
+                        const actor = pcsInParty[i];
+                        const healValue = (+html.find('input.heal')[i].value || 0);
+                        await applyHealingToActor(actor, healValue);
                         let bankedGold = characters[i].value;
                         const actorBank = actor.items.getName(BANK_NAME);
-                        const boldActorName = `<strong>${actor.name}</strong> healed to ${healAmount}/${actor.system.hp.max}`;
+                        if (i > 0) {
+                            actorLogs.push('<br/>');
+                        }
+
+                        const boldActorName = `<strong>${actor.name}</strong> healed to ${actor.system.hp.value}/${actor.system.hp.max}`;
                         if (actorBank) {
                             if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
-                                actorLogs.push(`${boldActorName}: No Downtime Cost.<br/>`);
+                                actorLogs.push(`${boldActorName}: No Downtime Cost.</br>`);
                             } else {
                                 bankedGold = Math.ceil(+bankedGold);
                                 const currentGold = Math.ceil(+actorBank.system.quantity.value);
                                 const newGold = Math.ceil(currentGold - bankedGold);
-                                actorBank.update({system: {quantity: {value: newGold}}});
-                                actorLogs.push(newGold > 0 ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.<br/>`
-                                    : `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to 0 (calculated: ${newGold}).<br/>`);
+                                await actorBank.update({system: {quantity: {value: newGold}}});
+                                actorLogs.push(newGold > 0 ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.</br>`
+                                    : `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to 0 (calculated: ${newGold}).</br>`);
                             }
                         } else {
-                            actorLogs.push(`${boldActorName}: No bank ledger named ${BANK_NAME}<br/>`);
+                            actorLogs.push(`${boldActorName}: No bank ledger named ${BANK_NAME}</br>`);
+                        }
+
+                        // Process healing for retainers of this character.
+                        const baseActorName = actor.name.split('(')[0].trim();
+                        for (const retainer of retainersInParty) {
+                            if (retainer.name.includes(`(${baseActorName})`)) {
+                                await applyHealingToActor(retainer, healValue);
+                                actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
+                            }
                         }
                     }
 
-                    const chatMessage = partyActors.length > 0 ? actorLogs.join('<br/>') : 'No characters in party';
+                    const chatMessage = partyActors.length > 0 ? actorLogs.join('') : 'No characters in party';
                     ChatMessage.create({
                         content: chatMessage,
                     });
