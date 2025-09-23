@@ -6,7 +6,7 @@ async function applyHealingToActor(actor, healValue) {
 if (document?.getElementById('sheet-data')) {
     console.log('Upkeep Input Window Already Open');
 } else {
-    const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details?.class !== 'Mule');
+    const partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true && actor.system.details?.class !== 'Mule');
     const formHtml = [];
     formHtml.push(`
 <script type="text/javascript">
@@ -83,7 +83,7 @@ if (document?.getElementById('sheet-data')) {
     </div>
 `);
     const pcsInParty = partyActors.filter(actor => !actor.system.retainer?.enabled);
-    const retainersInParty = partyActors.filter(actor => actor.system.retainer?.enabled);
+    const retainersInGame = game.actors.filter(actor => actor.type === 'character' && actor.system.retainer?.enabled && actor.system.details?.class !== 'Mule');
     for (const actor of pcsInParty) {
         formHtml.push(`
             <div class="form-group">
@@ -134,7 +134,7 @@ if (document?.getElementById('sheet-data')) {
 
                         // Process healing for retainers of this character.
                         const baseActorName = actor.name.split('(')[0].trim();
-                        for (const retainer of retainersInParty) {
+                        for (const retainer of retainersInGame) {
                             if (retainer.name.includes(`(${baseActorName})`)) {
                                 await applyHealingToActor(retainer, healValue);
                                 actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
