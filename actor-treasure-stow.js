@@ -19,7 +19,7 @@ new Dialog({
     content: "<p>Choose how to fill character inventories:</p>",
     buttons: {
         lastStep: {
-            label: "Last Encumbrance Step",
+            label: "Half Encumbrance",
             callback: () => stowTreasure(false)
         },
         max: {
@@ -55,7 +55,7 @@ async function stowTreasure(fillToAbsoluteMax) {
         characterOrder: [],
         characterReports: [],
         pileSummary: [],
-        selection: fillToAbsoluteMax ? "Max Encumbrance" : "Last Encumbrance Step"
+        selection: fillToAbsoluteMax ? "Max Encumbrance" : "Half Encumbrance"
     };
 
     console.log(`Selected actors: ${selectedActors.map(a => a.name).join(", ")}`);
