@@ -18,7 +18,7 @@ if (document?.getElementById('sheet-data')) {
         }
         return total;
     }
-  
+   
     function findCharacterInSheet(twoDimensionalArray, nameToFind) {
         for (let row = 0; row < twoDimensionalArray.length; row++) {
             for (let col = 0; col < twoDimensionalArray[row].length; col++) {
@@ -54,7 +54,7 @@ if (document?.getElementById('sheet-data')) {
         // Use setTimeout so that the pasted text can actually get there before referencing it.
         setTimeout(() => {
             const sheetDataRaw = document.getElementById('sheet-data').value;
-            const sheetDataGrid = sheetDataRaw.split(\'\\n\').map(line => line.split(\'\\t\'));
+            const sheetDataGrid = sheetDataRaw.split('\\n').map(line => line.split('\\t'));
             const partyActors = document.getElementsByClassName('actor-name');
             const characters = document.querySelectorAll('input.character');
             const heals = document.querySelectorAll('input.heal');
@@ -92,7 +92,7 @@ if (document?.getElementById('sheet-data')) {
                 <input type="number" class="heal" />
             </div>
         `);
-    }    
+    }   
     formHtml.push('</form>');
     
     new Dialog({
@@ -109,14 +109,30 @@ if (document?.getElementById('sheet-data')) {
                     for (let i = 0; i < characters.length; i++) {  // characters and pcsInParty should be same length
                         const actor = pcsInParty[i];
                         const healValue = (+html.find('input.heal')[i].value || 0);
+
+                        // --- PC HP Check (pre-update) ---
+                        const currentHP = actor.system.hp.value;
+                        const maxHP = actor.system.hp.max;
+                        
+                        // *** Healing Application ***
                         await applyHealingToActor(actor, healValue);
-                        let bankedGold = characters[i].value;
-                        const actorBank = actor.items.getName(BANK_NAME);
+                        
+                        let boldActorName = `<strong>${actor.name}</strong>`;
+                        
+                        // *** PC Healing Report ***
+                        // Only report healing if healValue > 0 AND the PC was not already at max HP
+                        if (healValue > 0 && currentHP < maxHP) {
+                            boldActorName += ` healed to ${actor.system.hp.value}/${actor.system.hp.max}`;
+                        }
+
                         if (i > 0) {
                             actorLogs.push('<br/>');
                         }
 
-                        const boldActorName = `<strong>${actor.name}</strong> healed to ${actor.system.hp.value}/${actor.system.hp.max}`;
+                        // *** Upkeep Deduction and Report ***
+                        let bankedGold = characters[i].value;
+                        const actorBank = actor.items.getName(BANK_NAME);
+
                         if (actorBank) {
                             if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
                                 actorLogs.push(`${boldActorName}: No Downtime Cost.</br>`);
@@ -125,19 +141,31 @@ if (document?.getElementById('sheet-data')) {
                                 const currentGold = Math.ceil(+actorBank.system.quantity.value);
                                 const newGold = Math.ceil(currentGold - bankedGold);
                                 await actorBank.update({system: {quantity: {value: newGold}}});
-                                actorLogs.push(newGold > 0 ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.</br>`
+                                actorLogs.push(newGold > 0 
+                                    ? `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to ${newGold}gp.</br>`
                                     : `${boldActorName}: Cost of living <b>${bankedGold}gp</b>. Bank balance changed from ${currentGold}gp to 0 (calculated: ${newGold}).</br>`);
                             }
                         } else {
                             actorLogs.push(`${boldActorName}: No bank ledger named ${BANK_NAME}</br>`);
                         }
 
-                        // Process healing for retainers of this character.
-                        const baseActorName = actor.name.split('(')[0].trim();
-                        for (const retainer of retainersInGame) {
-                            if (retainer.name.includes(`(${baseActorName})`)) {
-                                await applyHealingToActor(retainer, healValue);
-                                actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
+                        // *** Retainer Healing and Report ***
+                        // Process healing for retainers ONLY IF healValue > 0.
+                        if (healValue > 0) { 
+                            const baseActorName = actor.name.split('(')[0].trim();
+                            for (const retainer of retainersInGame) {
+                                if (retainer.name.includes(`(${baseActorName})`)) {
+                                    // Check retainer's HP before healing for the report check
+                                    const retainerCurrentHP = retainer.system.hp.value;
+                                    const retainerMaxHP = retainer.system.hp.max;
+                                    
+                                    await applyHealingToActor(retainer, healValue);
+                                    
+                                    // Only report if the retainer was NOT already at max HP
+                                    if (retainerCurrentHP < retainerMaxHP) {
+                                        actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
+                                    }
+                                }
                             }
                         }
                     }
