@@ -1,4 +1,4 @@
-const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details.class.toLowerCase() !== 'normal human');
 const formHtml = [];
 formHtml.push('<form>');
 partyActors.forEach(actor => {
@@ -18,31 +18,38 @@ new Dialog({
     buttons: {
         calculate: {
             label: "Process Banking",
-            callback: (html) => {
+            callback: async (html) => { // Added async for modern Foundry updates
                 const BANK_NAME = 'GP (Bank)';
                 const characters = html.find('input.character');
                 const actorLogs = [];
                 actorLogs.push('<h2>Character Treasure Split</h2>');
+                
+                // Using a loop that correctly matches the filtered partyActors array
                 for (let i = 0; i < characters.length; i++) {
                     const actor = partyActors[i];
-                    const bankedGold = Math.max(0, characters[i].value);
+                    // Use parseFloat for robustness and Math.max(0, ...) to ensure non-negative deposit
+                    const bankedGold = Math.max(0, parseFloat(characters[i].value) || 0); 
                     const actorBank = actor.items.getName(BANK_NAME);
+                    
                     if (actorBank) {
                         if (bankedGold <= 0) {
                             actorLogs.push(`<b>${actor.name}:</b> No change.</br>`);
                         } else {
-                            const currentGold = actorBank.system.quantity.value;
+                            // Corrected property access for OSE Ruleset quantity (usually a number)
+                            const currentGold = actorBank.system.quantity;
                             const newGold = currentGold + bankedGold;
-                            actorBank.update({system: {quantity: {value: newGold}}});
-                            actorLogs.push(newGold > currentGold ? `<b>${actor.name}:</b> Bank deposit from ${currentGold}gp to ${newGold}gp.</br>`
-                                : `<b>${actor.name}:</b> No change.</br>`);
+                            
+                            // Using await for the asynchronous update call
+                            await actorBank.update({system: {quantity: newGold}});
+                            
+                            actorLogs.push(`<b>${actor.name}:</b> Bank deposit from ${currentGold}gp to ${newGold}gp.</br>`);
                         }
                     } else {
                         actorLogs.push(`<b>${actor.name}:</b> No bank named ${BANK_NAME}.</br>`);
                     }
                 }
 
-                const chatMessage = partyActors.length > 0 ? actorLogs.join('<br />') : 'No characters in party.';
+                const chatMessage = partyActors.length > 0 ? actorLogs.join('<br />') : 'No eligible characters in party.';
                 ChatMessage.create({
                     content: chatMessage
                 });
