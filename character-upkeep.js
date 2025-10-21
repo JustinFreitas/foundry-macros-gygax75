@@ -163,7 +163,7 @@ if (document?.getElementById('sheet-data')) {
                                     
                                     // Only report if the retainer was NOT already at max HP
                                     if (retainerCurrentHP < retainerMaxHP) {
-                                        actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
+                                        actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} rested.</br>`);
                                     }
                                 }
                             }
