@@ -36,11 +36,11 @@ new Dialog({
                             actorLogs.push(`<b>${actor.name}:</b> No change.</br>`);
                         } else {
                             // Corrected property access for OSE Ruleset quantity (usually a number)
-                            const currentGold = actorBank.system.quantity;
+                            const currentGold = actorBank.system.quantity.value;
                             const newGold = currentGold + bankedGold;
                             
                             // Using await for the asynchronous update call
-                            await actorBank.update({system: {quantity: newGold}});
+                            await actorBank.update({system: {quantity: {value: newGold}}});
                             
                             actorLogs.push(`<b>${actor.name}:</b> Bank deposit from ${currentGold}gp to ${newGold}gp.</br>`);
                         }
