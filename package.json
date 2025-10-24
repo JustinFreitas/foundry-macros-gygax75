@@ -1,0 +1,26 @@
+{
+  "name": "foundry-macros-gygax75",
+  "version": "1.0.0",
+  "description": "",
+  "main": "actor-treasure-stow.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JustinFreitas/foundry-macros-gygax75.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JustinFreitas/foundry-macros-gygax75/issues"
+  },
+  "homepage": "https://github.com/JustinFreitas/foundry-macros-gygax75#readme",
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "jasmine": "^5.12.0",
+    "jest": "^30.2.0"
+  }
+}

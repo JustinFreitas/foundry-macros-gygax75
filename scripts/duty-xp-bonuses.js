@@ -1,5 +1,4 @@
 if (document?.getElementById('duty-xp-bonuses')) {
-    console.log('Duty XP Bonuses Window Already Open');
 } else {
     const users = game.users.filter(user => user.hasPlayerOwner && user.active);
     const formHtml = [];
@@ -63,11 +62,8 @@ formHtml.push(`
                 label: "Apply Bonuses",
                 callback: (html) => {
                     const requestUserSelectElement = document.getElementById('request-user-select');
-                    console.log(`Request User Name: ${requestUserSelectElement.options[requestUserSelectElement.selectedIndex]?.text}  User ID: ${requestUserSelectElement.value}`);
                     const callerUserSelectElement = document.getElementById('caller-user-select');
-                    console.log(`Caller User Name: ${callerUserSelectElement.options[callerUserSelectElement.selectedIndex]?.text}  User ID: ${callerUserSelectElement.value}`);
                     const mapperUserSelectElement = document.getElementById('mapper-user-select');
-                    console.log(`Mapper User Name: ${mapperUserSelectElement.options[mapperUserSelectElement.selectedIndex]?.text}  User ID: ${mapperUserSelectElement.value}`);
                     const selectedPlayersSet = new Set([
                         requestUserSelectElement.options[requestUserSelectElement.selectedIndex]?.text,
                         callerUserSelectElement.options[callerUserSelectElement.selectedIndex]?.text,
@@ -80,14 +76,12 @@ formHtml.push(`
                     actorLogs.push('<h2>Duty XP Report</h2>');
                     partyActors.forEach(actor => {
                         if (actor.ownership[requestUserSelectElement.value] === 3 || actor.ownership[callerUserSelectElement.value] === 3 || actor.ownership[mapperUserSelectElement.value] === 3) {
-                            console.log(`Actor needing XP adjustment: ${actor.name}.`);
                             if (actor.flags.dutyXP !== undefined) {
                                 actorLogs.push(`<b>${actor.name}:</b> has already had their XP adjusted for duties ${actor.flags.dutyXP.duties.join(", ")}.`);
                                 return;
                             }
                             
                             const origXpBonus = actor.system.details.xp.bonus || 0;
-                            console.log(`Orig bonus: ${origXpBonus}`);
 
                             const duties = [];
                             if (actor.ownership[requestUserSelectElement.value] === 3) {
@@ -102,7 +96,6 @@ formHtml.push(`
                                 duties.push('mapper');
                             }
 
-                            console.log(`Duties: ${duties.join(", ")}`);
                             const flagsObj = {
                                 dutyXP: {
                                     origXpBonus: origXpBonus,
@@ -112,7 +105,6 @@ formHtml.push(`
 
                             const dutiesLength = flagsObj.dutyXP.duties.length;
                             const newXpBonus = origXpBonus + Math.min((dutiesLength || 0) * 5, 5); 
-                            console.log(`New XP Bonus: ${newXpBonus}`);
                             const systemObj = {
                                 details: {
                                     xp: {
