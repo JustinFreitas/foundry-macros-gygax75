@@ -3,72 +3,83 @@ const path = require('path');
 
 const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/duty-xp-bonuses.js'), 'utf8');
 
-global.game = {
-    users: {
-        _data: [],
-        filter: jest.fn(function(filterFn) {
-            return this._data.filter(filterFn);
-        }),
-        forEach: jest.fn(function(callback) {
-            this._data.forEach(callback);
-        }),
-        set: jest.fn(function(users) {
-            this._data = users;
-        })
-    },
-    actors: {
-        _data: [],
-        filter: jest.fn(function(filterFn) {
-            return this._data.filter(filterFn);
-        }),
-        set: jest.fn(function(actors) {
-            this._data = actors.map(actorData => {
-                let actor = {
-                    ...actorData,
-                    update: jest.fn()
-                };
-                return actor;
-            });
-        })
-    }
-};
-
-global.ChatMessage = {
-    _created: [],
-    create: jest.fn(function(message) {
-        this._created.push(message);
-    }),
-    getCreated: jest.fn(function() {
-        return this._created;
-    }),
-    clear: jest.fn(function() {
-        this._created = [];
-    })
-};
-
-global.document = {
-    getElementById: jest.fn((id) => {
-        if (id === 'request-user-select') {
-            return { value: '1', options: [{ text: 'Player1' }] };
-        }
-        if (id === 'caller-user-select') {
-            return { value: '2', options: [{ text: 'Player2' }] };
-        }
-        if (id === 'mapper-user-select') {
-            return { value: '3', options: [{ text: 'Player3' }] };
-        }
-        return null;
-    })
-};
-
-global.Dialog = jest.fn(function(dialogData) {
-    this.render = jest.fn();
-    dialogData.buttons.calculate.callback();
-});
 
 describe("Duty XP Bonuses Macro", () => {
-
     beforeEach(() => {
+        globalThis.game = {
+            users: {
+                _data: [],
+                filter: jest.fn(function(filterFn) {
+                    return this._data.filter(filterFn);
+                }),
+                forEach: jest.fn(function(callback) {
+                    this._data.forEach(callback);
+                }),
+                set: jest.fn(function(users) {
+                    this._data = users;
+                })
+            },
+            actors: {
+                _data: [],
+                filter: jest.fn(function(filterFn) {
+                    return this._data.filter(filterFn);
+                }),
+                set: jest.fn(function(actors) {
+                    this._data = actors.map(actorData => {
+                        let actor = {
+                            ...actorData,
+                            update: jest.fn()
+                        };
+                        return actor;
+                    });
+                })
+            }
+        };
+
+        globalThis.ChatMessage = {
+            _created: [],
+            create: jest.fn(function(message) {
+                this._created.push(message);
+            }),
+            getCreated: jest.fn(function() {
+                return this._created;
+            }),
+            clear: jest.fn(function() {
+                this._created = [];
+            })
+        };
+
+        globalThis.document = {
+            getElementById: jest.fn((id) => {
+                if (id === 'duty-xp-bonuses') {
+                    return null; 
+                }
+                return null;
+            })
+        };
+
+        const mockHtml = {
+            find: jest.fn(selector => {
+                if (selector === '#request-user-select') {
+                    return [{ value: '1', options: [{ text: 'Player1' }], selectedIndex: 0 }];
+                }
+                if (selector === '#caller-user-select') {
+                    return [{ value: '2', options: [{ text: 'Player2' }], selectedIndex: 0 }];
+                }
+                if (selector === '#mapper-user-select') {
+                    return [{ value: '3', options: [{ text: 'Player3' }], selectedIndex: 0 }];
+                }
+                return [{ value: '', options: [{ text: '' }], selectedIndex: 0 }];
+            })
+        };
+
+        globalThis.Dialog = jest.fn().mockImplementation((dialogData) => {
+            dialogData.buttons.calculate.callback(mockHtml);
+            return {
+                render: jest.fn()
+            };
+        });
+
         game.users.set([]);
         game.actors.set([]);
         ChatMessage.clear();
@@ -100,7 +111,7 @@ describe("Duty XP Bonuses Macro", () => {
         const actors = game.actors._data;
 
 
-        eval(macroScript);
+        new Function(macroScript)();
 
         expect(actors[0].update).toHaveBeenCalled();
         expect(actors[1].update).toHaveBeenCalled();
@@ -111,3 +122,4 @@ describe("Duty XP Bonuses Macro", () => {
         expect(messages[0].content).toContain('<b>Bob:</b> XP bonus updated from 5 to 10 for duty caller.');
     });
 });
+

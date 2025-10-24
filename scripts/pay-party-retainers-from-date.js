@@ -139,3 +139,4 @@ if (document?.getElementById('start-date')) {
         default: "calculate"
     }).render(true);
 }
+

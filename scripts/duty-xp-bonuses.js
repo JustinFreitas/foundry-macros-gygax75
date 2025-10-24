@@ -61,9 +61,9 @@ formHtml.push(`
             calculate: {
                 label: "Apply Bonuses",
                 callback: (html) => {
-                    const requestUserSelectElement = document.getElementById('request-user-select');
-                    const callerUserSelectElement = document.getElementById('caller-user-select');
-                    const mapperUserSelectElement = document.getElementById('mapper-user-select');
+                    const requestUserSelectElement = html.find('#request-user-select')[0];
+                    const callerUserSelectElement = html.find('#caller-user-select')[0];
+                    const mapperUserSelectElement = html.find('#mapper-user-select')[0];
                     const selectedPlayersSet = new Set([
                         requestUserSelectElement.options[requestUserSelectElement.selectedIndex]?.text,
                         callerUserSelectElement.options[callerUserSelectElement.selectedIndex]?.text,
