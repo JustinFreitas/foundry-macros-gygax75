@@ -1,4 +1,4 @@
-if (!window.stowTreasureHookRegistered) {
+if (typeof window !== 'undefined' && typeof Hooks !== 'undefined' && !window.stowTreasureHookRegistered) {
     Hooks.on("renderChatMessage", (message, html, data) => {
         const collapseButton = html[0].querySelector('button[data-action="collapse-details"]');
         if (collapseButton) {
@@ -151,9 +151,24 @@ async function stowTreasure(fillToAbsoluteMax) {
         }
 
         fillableContainers.sort((a, b) => {
+            const aIsPartiallyFilled = a.item.system.totalWeight > 0;
+            const bIsPartiallyFilled = b.item.system.totalWeight > 0;
+
+            if (aIsPartiallyFilled && !bIsPartiallyFilled) {
+                return -1;
+            }
+            if (!aIsPartiallyFilled && bIsPartiallyFilled) {
+                return 1;
+            }
+
             const aRemaining = a.capacity - a.item.system.totalWeight;
             const bRemaining = b.capacity - b.item.system.totalWeight;
-            return bRemaining - aRemaining;
+
+            if (aIsPartiallyFilled && bIsPartiallyFilled) {
+                return aRemaining - bRemaining;
+            }
+
+            return a.capacity - b.capacity;
         });
 
         let itemsMovedForCharacter = false;

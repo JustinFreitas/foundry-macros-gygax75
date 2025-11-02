@@ -46,6 +46,18 @@ describe('actor-treasure-stow.js', () => {
             controlled: []
         }
     };
+    // Mocking global functions/objects
+    global.game = mockGame;
+    global.ui = mockUi;
+    global.ChatMessage = mockChatMessage;
+    global.Hooks = mockHooks;
+    global.Dialog = mockDialog;
+    global.randomID = jest.fn(() => "mockID");
+    global.canvas = {
+        tokens: {
+            controlled: []
+        }
+    };
 
     // Helper functions extracted from the original script for testing
     const getCapacityLimit = (actor, fillToAbsoluteMax) => {
