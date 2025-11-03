@@ -82,6 +82,33 @@ describe('actor-treasure-stow.js', () => {
         return classPrecedence.length;
     };
 
+    async function consolidateContainer(actor, container) {
+        console.log(`Consolidating items in container '${container.name}' for actor '${actor.name}'.`);
+        const itemsInContainer = actor.items.filter(item => item.system.containerId === container.id);
+        if (itemsInContainer.length === 0) return;
+    
+        const itemsByName = itemsInContainer.reduce((acc, item) => {
+            if (!acc[item.name]) {
+                acc[item.name] = [];
+            }
+            acc[item.name].push(item);
+            return acc;
+        }, {});
+    
+        for (const name in itemsByName) {
+            const items = itemsByName[name];
+            if (items.length > 1) {
+                const firstItem = items[0];
+                const totalQuantity = items.reduce((sum, item) => sum + item.system.quantity.value, 0);
+    
+                await actor.updateEmbeddedDocuments("Item", [{ _id: firstItem.id, "system.quantity.value": totalQuantity }]);
+    
+                const idsToDelete = items.slice(1).map(item => item.id);
+                await actor.deleteEmbeddedDocuments("Item", idsToDelete);
+            }
+        }
+    }
+
     // Test for getClassPrecedence
     describe('getClassPrecedence', () => {
         it('should return correct precedence for "Floating Disc"', () => {
@@ -167,6 +194,141 @@ describe('actor-treasure-stow.js', () => {
                 const actor = createMockActor("Fighter", 100, 120, [0, 50, 100]);
                 expect(getAvailableCapacity(actor, false)).toBe(-20); // 100 - 120
             });
+        });
+    });
+
+    describe('consolidateContainer', () => {
+        it('should consolidate duplicate items within a container', async () => {
+            const mockContainer = {
+                id: "container1",
+                name: "Backpack (100)",
+                system: { totalWeight: 0 }
+            };
+
+            const mockItem1 = {
+                id: "item1",
+                name: "Rope",
+                system: { quantity: { value: 1 }, containerId: "container1" }
+            };
+            const mockItem2 = {
+                id: "item2",
+                name: "Rope",
+                system: { quantity: { value: 1 }, containerId: "container1" }
+            };
+            const mockItem3 = {
+                id: "item3",
+                name: "Torch",
+                system: { quantity: { value: 2 }, containerId: "container1" }
+            };
+
+            const mockActor = {
+                name: "Test Actor",
+                items: [
+                    mockContainer,
+                    mockItem1,
+                    mockItem2,
+                    mockItem3
+                ],
+                updateEmbeddedDocuments: jest.fn(),
+                deleteEmbeddedDocuments: jest.fn(),
+            };
+
+            // Mock the actor.items.get method for the consolidateContainer function
+            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
+
+            await consolidateContainer(mockActor, mockContainer);
+
+            // Expect updateEmbeddedDocuments to be called for the first item with combined quantity
+            expect(mockActor.updateEmbeddedDocuments).toHaveBeenCalledWith(
+                "Item",
+                [{ _id: "item1", "system.quantity.value": 2 }]
+            );
+
+            // Expect deleteEmbeddedDocuments to be called for the duplicate item
+            expect(mockActor.deleteEmbeddedDocuments).toHaveBeenCalledWith(
+                "Item",
+                ["item2"]
+            );
+
+            // Ensure Torch is not affected as it's not a duplicate
+            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalledWith(
+                "Item",
+                [{ _id: "item3", "system.quantity.value": expect.any(Number) }]
+            );
+        });
+
+        it('should not consolidate if no duplicate items exist', async () => {
+            const mockContainer = {
+                id: "container1",
+                name: "Backpack (100)",
+                system: { totalWeight: 0 }
+            };
+
+            const mockItem1 = {
+                id: "item1",
+                name: "Rope",
+                system: { quantity: { value: 1 }, containerId: "container1" }
+            };
+            const mockItem3 = {
+                id: "item3",
+                name: "Torch",
+                system: { quantity: { value: 2 }, containerId: "container1" }
+            };
+
+            const mockActor = {
+                name: "Test Actor",
+                items: [
+                    mockContainer,
+                    mockItem1,
+                    mockItem3
+                ],
+                updateEmbeddedDocuments: jest.fn(),
+                deleteEmbeddedDocuments: jest.fn(),
+            };
+
+            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
+
+            await consolidateContainer(mockActor, mockContainer);
+
+            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(mockActor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+        });
+
+        it('should not consolidate items not in the specified container', async () => {
+            const mockContainer = {
+                id: "container1",
+                name: "Backpack (100)",
+                system: { totalWeight: 0 }
+            };
+
+            const mockItem1 = {
+                id: "item1",
+                name: "Rope",
+                system: { quantity: { value: 1 }, containerId: "container1" }
+            };
+            const mockItem2 = {
+                id: "item2",
+                name: "Rope",
+                system: { quantity: { value: 1 }, containerId: "container2" } // Different container
+            };
+
+            const mockActor = {
+                name: "Test Actor",
+                items: [
+                    mockContainer,
+                    mockItem1,
+                    mockItem2
+                ],
+                updateEmbeddedDocuments: jest.fn(),
+                deleteEmbeddedDocuments: jest.fn(),
+            };
+
+            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
+
+            await consolidateContainer(mockActor, mockContainer);
+
+            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(mockActor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
         });
     });
 });

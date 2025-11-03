@@ -1,3 +1,30 @@
+async function consolidateContainer(actor, container) {
+    console.log(`Consolidating items in container '${container.name}' for actor '${actor.name}'.`);
+    const itemsInContainer = actor.items.filter(item => item.system.containerId === container.id);
+    if (itemsInContainer.length === 0) return;
+
+    const itemsByName = itemsInContainer.reduce((acc, item) => {
+        if (!acc[item.name]) {
+            acc[item.name] = [];
+        }
+        acc[item.name].push(item);
+        return acc;
+    }, {});
+
+    for (const name in itemsByName) {
+        const items = itemsByName[name];
+        if (items.length > 1) {
+            const firstItem = items[0];
+            const totalQuantity = items.reduce((sum, item) => sum + item.system.quantity.value, 0);
+
+            await actor.updateEmbeddedDocuments("Item", [{ _id: firstItem.id, "system.quantity.value": totalQuantity }]);
+
+            const idsToDelete = items.slice(1).map(item => item.id);
+            await actor.deleteEmbeddedDocuments("Item", idsToDelete);
+        }
+    }
+}
+
 if (typeof window !== 'undefined' && typeof Hooks !== 'undefined' && !window.stowTreasureHookRegistered) {
     Hooks.on("renderChatMessage", (message, html, data) => {
         const collapseButton = html[0].querySelector('button[data-action="collapse-details"]');
@@ -286,6 +313,15 @@ async function stowTreasure(fillToAbsoluteMax) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (itemsMovedForCharacter) {
+            for (const containerId of characterReport.modifiedContainerNames) {
+                const container = characterActor.items.get(containerId);
+                if (container) {
+                    await consolidateContainer(characterActor, container);
                 }
             }
         }
