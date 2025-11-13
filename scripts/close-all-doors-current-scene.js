@@ -1,4 +1,3 @@
-//const openDoors = game.scenes.active.walls.filter(w=>!!w.door && !!w.ds);
 const openDoors = game.canvas.walls.doors.filter(w=>w.isDoor && w.isOpen);
 let content;
 if (openDoors.length === 0) {
