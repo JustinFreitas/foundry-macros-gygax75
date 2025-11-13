@@ -72,7 +72,6 @@ async function stowTreasure(fillToAbsoluteMax) {
         return max - actor.system.encumbrance.value;
     };
 
-    const activeScene = game.scenes.active;
     const selectedTokens = canvas.tokens.controlled;
     const selectedActors = selectedTokens.map(token => token.actor).filter(actor => actor?.type === 'character');
 
