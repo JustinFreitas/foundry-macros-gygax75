@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/close-all-doors-active-scene.js'), 'utf8');
+const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/close-all-doors-current-scene.js'), 'utf8');
 
 global.game = {
-    scenes: {
-        active: {
-            walls: []
+    canvas: {
+        walls: {
+            doors: []
         }
     },
     userId: '123'
@@ -25,10 +25,10 @@ global.ChatMessage = {
     })
 };
 
-describe("Close All Doors Active Scene Macro", () => {
+describe("Close All Doors In Current Scene Macro", () => {
 
     beforeEach(() => {
-        game.scenes.active.walls = [];
+        game.canvas.walls.doors = [];
         ChatMessage.clear();
     });
 
@@ -44,10 +44,10 @@ describe("Close All Doors Active Scene Macro", () => {
 
     test("should close all open doors and report the number of closed doors", async () => {
         const openDoors = [
-            { door: 1, ds: 1, update: jest.fn() },
-            { door: 1, ds: 1, update: jest.fn() },
+            { isDoor: true, isOpen: true, document: { update: jest.fn() } },
+            { isDoor: true, isOpen: true, document: { update: jest.fn() } },
         ];
-        game.scenes.active.walls = openDoors;
+        game.canvas.walls.doors = openDoors;
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const scriptFunction = new AsyncFunction(macroScript);
@@ -56,7 +56,7 @@ describe("Close All Doors Active Scene Macro", () => {
         const messages = ChatMessage.getCreated();
         expect(messages.length).toBe(1);
         expect(messages[0].content).toContain('All Open Doors Closed (2)');
-        expect(openDoors[0].update).toHaveBeenCalledWith({ds: 0});
-        expect(openDoors[1].update).toHaveBeenCalledWith({ds: 0});
+        expect(openDoors[0].document.update).toHaveBeenCalledWith({ds: 0});
+        expect(openDoors[1].document.update).toHaveBeenCalledWith({ds: 0});
     });
 });
