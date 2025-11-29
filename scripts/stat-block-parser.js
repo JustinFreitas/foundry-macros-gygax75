@@ -5,7 +5,7 @@
 
 // Parsing functions for individual stat attributes
 const parseAC = (text) => {
-    const acPattern = /AC\s+(\d+)/i;
+    const acPattern = /(?:AC|ARMOR\s+CLASS)\s*:?\s*(\d+)/i;
     const match = text.match(acPattern);
     return match ? parseInt(match[1]) : null;
 };
@@ -17,13 +17,14 @@ const parseHP = (text) => {
 };
 
 const parseHD = (text) => {
-    // Match patterns like "HD 2+1", "HD 2", "Level O", "Level 0", "Level 1"
-    const hdPattern = /(?:HD|Level)\s+(\d+(?:\+\d+)?|O)/i;
+    // Match patterns like "HD 2+1", "HD 2", "Level O", "Level 0", "Level 1", "HIT DICE: 5 + 3"
+    const hdPattern = /(?:HD|Level|HIT\s+DICE)\s*:?\s*(\d+(?:\s*\+\s*\d+)?|O)/i;
     const match = text.match(hdPattern);
     if (!match) return null;
 
-    // Convert "O" or "0" to 0, handle "+1" notation
-    const hdValue = match[1].toUpperCase() === 'O' ? '0' : match[1];
+    // Convert "O" or "0" to 0, handle "+1" notation (remove spaces around +)
+    let hdValue = match[1].toUpperCase() === 'O' ? '0' : match[1];
+    hdValue = hdValue.replace(/\s*\+\s*/, '+');
     return hdValue;
 };
 
@@ -68,8 +69,8 @@ const calculateTHAC0FromHD = (hdString) => {
 };
 
 const parseAttacks = (text) => {
-    // Match patterns like "#AT 1 or 2", "#AT 1", "Att: 1", "Attacks: 2"
-    const attackPattern = /#?AT(?:tacks?)?\s*:?\s*(\d+)(?:\s+or\s+(\d+))?/i;
+    // Match patterns like "#AT 1 or 2", "#AT 1", "Att: 1", "Attacks: 2", "NO. OF ATTACKS: 1"
+    const attackPattern = /(?:#?AT(?:tacks?)?|NO\.\s+OF\s+ATTACKS)\s*:?\s*(\d+)(?:\s+or\s+(\d+))?/i;
     const match = text.match(attackPattern);
     if (!match) return null;
 
@@ -81,8 +82,8 @@ const parseAttacks = (text) => {
 };
 
 const parseDamage = (text) => {
-    // Match patterns like "D 1-6 (spear)", "Dmg: 1-6/1-6", "D: 2-8"
-    const damagePattern = /D(?:mg)?(?:amage)?\s*:?\s*([\d\-\/]+(?:\s*\([^)]+\))?(?:\s+or\s+[\d\-\/]+(?:\s*\([^)]+\))?)*)/i;
+    // Match patterns like "D 1-6 (spear)", "Dmg: 1-6/1-6", "D: 2-8", "DAMAGE/ATTACK: 1-6"
+    const damagePattern = /(?:D(?:mg)?(?:amage)?(?:\/ATTACK)?)\s*:?\s*([\d\-\/]+(?:\s*\([^)]+\))?(?:\s+or\s+[\d\-\/]+(?:\s*\([^)]+\))?)*)/i;
     const match = text.match(damagePattern);
     return match ? match[1].trim() : null;
 };
@@ -95,13 +96,21 @@ const parseXP = (text) => {
 };
 
 const parseAlignment = (text) => {
-    // Match patterns like "AL N", "AL: LG", "AL NE"
-    const alignmentPattern = /AL\s*:?\s*([A-Z]{1,2})/i;
+    // Match patterns like "AL N", "AL: LG", "AL NE", "ALIGNMENT: Lawful evil"
+    // Use \b to ensure we match whole words (avoids matching "AL" in "SPECIAL")
+    const alignmentPattern = /\b(?:AL(?:ignment)?)\s*:?\s*([^\r\n;]+)/i;
     const match = text.match(alignmentPattern);
     if (!match) return null;
 
+    const value = match[1].trim();
+
+    // If it's a full name (longer than 2 chars), return it capitalized
+    if (value.length > 2) {
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
     // Convert abbreviation to full name
-    const abbreviation = match[1].toUpperCase();
+    const abbreviation = value.toUpperCase();
     const alignmentMap = {
         'L': 'Lawful',
         'N': 'Neutral',
@@ -117,7 +126,7 @@ const parseAlignment = (text) => {
         'CE': 'Chaotic Evil'
     };
 
-    return alignmentMap[abbreviation] || abbreviation;
+    return alignmentMap[abbreviation] || value;
 };
 
 const parseMorale = (text) => {
@@ -156,16 +165,16 @@ const calculateMoraleFromHD = (hdString) => {
 };
 
 const parseTreasureType = (text) => {
-    // Match patterns like "TT A", "TT: B", "TT C, D"
-    const treasurePattern = /TT\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
+    // Match patterns like "TT A", "TT: B", "TT C, D", "TREASURE TYPE: E"
+    const treasurePattern = /(?:TT|TREASURE\s+TYPE)\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
     const match = text.match(treasurePattern);
     return match ? match[1].trim() : null;
 };
 
 const parseMovement = (text) => {
-    // Match patterns like "MV 12", "MV: 9", "MV6"
+    // Match patterns like "MV 12", "MV: 9", "MV6", "MOVE: 12”/24”"
     // Value is in inches and needs to be multiplied by 10
-    const movementPattern = /MV\s*:?\s*(\d+)/i;
+    const movementPattern = /(?:MV|MOVE)\s*:?\s*(\d+)/i;
     const match = text.match(movementPattern);
     return match ? parseInt(match[1]) * 10 : null;
 };

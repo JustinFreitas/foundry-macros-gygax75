@@ -321,6 +321,65 @@ describe("stat-block-parser", () => {
             expect(actorData.system.details.morale).toBe(9);
         });
 
+        it("should parse AD&D style stat blocks", async () => {
+            require("../scripts/stat-block-parser");
+
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            const addStatBlock = `
+FREQUENCY: Uncommon
+NO. APPEARING: 2-12
+ARMOR CLASS: 4
+MOVE: 12”/24”
+HIT DICE: 5 + 3
+% IN LAIR: 25%
+TREASURE TYPE: E
+NO. OF ATTACKS: 1
+DAMAGE/ATTACK: 1-6
+SPECIAL ATTACKS: Energy drain
+SPECIAL DEFENSES: Silver or magic
+weapons to hit
+MAGIC RESISTANCE: See below
+INTELLIGENCE: Very
+ALIGNMENT: Lawful evil
+SIZE: M
+PSIONIC ABILITY: Nil
+Attack/Defense Modes: Nil
+            `;
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') {
+                        return [{ value: "Wight" }];
+                    }
+                    if (selector === '#stat-block') {
+                        return [{ value: addStatBlock }];
+                    }
+                }),
+            };
+
+            await callback(mockHtml);
+
+            const actorData = mockActor.create.mock.calls[0][0];
+
+            // Verify parsed stats
+            expect(actorData.system.ac.value).toBe(4); // ARMOR CLASS: 4
+            expect(actorData.system.hp.hd).toBe("5+3"); // HIT DICE: 5 + 3
+            // HP Calc: 5 * 4.5 + 5 * 3 = 22.5 + 15 = 37.5 -> 37
+            expect(actorData.system.hp.value).toBe(37);
+            expect(actorData.system.attacks).toBe(1); // NO. OF ATTACKS: 1
+            expect(actorData.system.damage).toBe("1-6"); // DAMAGE/ATTACK: 1-6
+            expect(actorData.system.movement.base).toBe(120); // MOVE: 12" -> 120
+            expect(actorData.system.details.treasure.type).toBe("E"); // TREASURE TYPE: E
+            // Alignment "Lawful evil" should be preserved or capitalized
+            expect(actorData.system.details.alignment).toMatch(/Lawful evil/i);
+
+            // Morale calculated from HD 5+3
+            // Base 50 + (4 * 5) + 3 = 73% -> 2 + 7.3 = 9.3 -> 9
+            expect(actorData.system.details.morale).toBe(9);
+        });
+
         it("should handle Actor.create errors gracefully", async () => {
             mockActor.create.mockRejectedValue(new Error("Database error"));
 
