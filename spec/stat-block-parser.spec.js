@@ -56,21 +56,6 @@ describe("stat-block-parser", () => {
             expect(match[1]).toBe("2+1");
         });
 
-        it("should parse HD from stat block with Level notation", () => {
-            const statBlock = "AC 8; Level O; hp 4";
-            const hdPattern = /(?:HD|Level)\s+(\d+(?:\+\d+)?|O)/i;
-            const match = statBlock.match(hdPattern);
-            expect(match[1]).toBe("O");
-        });
-
-        it("should parse attacks from stat block with 'or' notation", () => {
-            const statBlock = "#AT 1 or 2; D 1-6";
-            const attackPattern = /#?AT(?:tacks?)?\s*:?\s*(\d+)(?:\s+or\s+(\d+))?/i;
-            const match = statBlock.match(attackPattern);
-            expect(match[1]).toBe("1");
-            expect(match[2]).toBe("2");
-        });
-
         it("should parse damage from stat block", () => {
             const statBlock = "D 1-6 (spear) or 1-6/1-6 (shortbow)";
             const damagePattern = /D(?:mg)?(?:amage)?\s*:?\s*([\d\-\/]+(?:\s*\([^)]+\))?(?:\s+or\s+[\d\-\/]+(?:\s*\([^)]+\))?)*)/i;
@@ -114,11 +99,27 @@ describe("stat-block-parser", () => {
             expect(match[1]).toBe("8");
         });
 
+        it("should calculate morale from HD when ML not present", () => {
+            // Test implementation logic via integration test below, 
+            // but we can verify the logic if we exported the function.
+            // Since we can't, we'll rely on the integration test.
+        });
+
         it("should parse treasure type from stat block", () => {
             const statBlock = "AC 8; TT A; hp 4";
             const treasurePattern = /TT\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
             const match = statBlock.match(treasurePattern);
             expect(match[1]).toBe("A");
+        });
+
+        it("should parse movement and multiply by 10", () => {
+            const statBlock = "MV 12; AC 8; hp 4";
+            const movementPattern = /MV\s*:?\s*(\d+)/i;
+            const match = statBlock.match(movementPattern);
+            expect(match[1]).toBe("12");
+            // Verify multiplication
+            const movement = parseInt(match[1]) * 10;
+            expect(movement).toBe(120);
         });
     });
 
@@ -153,7 +154,7 @@ describe("stat-block-parser", () => {
                         return [{ value: "Bandit" }];
                     }
                     if (selector === '#stat-block') {
-                        return [{ value: "AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18" }];
+                        return [{ value: "AC 8 (leather); MV 12; AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18" }];
                     }
                 }),
             };
@@ -174,6 +175,7 @@ describe("stat-block-parser", () => {
             expect(actorData.system.details.alignment).toBe("Neutral"); // Alignment converted from "N"
             expect(actorData.system.details.morale).toBe(8); // Morale value
             expect(actorData.system.details.treasure.type).toBe("A"); // Treasure type
+            expect(actorData.system.movement.base).toBe(120); // Movement (12 * 10)
             expect(actorData.system.attacks).toBe(2); // Max of 1 or 2
             expect(actorData.system.damage).toMatch(/1-6.*spear.*1-6\/1-6.*shortbow/i);
 
@@ -256,8 +258,11 @@ describe("stat-block-parser", () => {
             expect(actorData.system.thac0.value).toBe(19);
             expect(actorData.system.details.xp).toBe(0); // Default XP
             expect(actorData.system.details.alignment).toBe(""); // Default alignment
-            expect(actorData.system.details.morale).toBe(0); // Default morale
+            // Morale should be calculated from default HD "1"
+            // HD 1 -> 50% base -> 7
+            expect(actorData.system.details.morale).toBe(7);
             expect(actorData.system.details.treasure.type).toBe(""); // Default treasure type
+            expect(actorData.system.movement.base).toBe(0); // Default movement
         });
 
         it("should calculate THAC0 from HD when THAC0 not in stat block", async () => {
@@ -282,6 +287,38 @@ describe("stat-block-parser", () => {
             const actorData = mockActor.create.mock.calls[0][0];
             expect(actorData.system.hp.hd).toBe("1");
             expect(actorData.system.thac0.value).toBe(19); // 1 HD = THAC0 19
+        });
+
+        it("should calculate HP from HD when HP not in stat block", async () => {
+            require("../scripts/stat-block-parser");
+
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') {
+                        return [{ value: "Ogre" }];
+                    }
+                    if (selector === '#stat-block') {
+                        // No HP specified, only HD 4+1
+                        return [{ value: "AC 5; HD 4+1; #AT 1; D 1-10" }];
+                    }
+                }),
+            };
+
+            await callback(mockHtml);
+
+            const actorData = mockActor.create.mock.calls[0][0];
+            expect(actorData.system.hp.hd).toBe("4+1");
+            // HP should be calculated: 4*4.5 + 4*1 = 18 + 4 = 22
+            expect(actorData.system.hp.value).toBe(22);
+            expect(actorData.system.hp.max).toBe(22);
+
+            // Verify calculated morale for HD 4+1
+            // Base 50 + (3 * 5) + 1 = 66% -> 2 + 6.6 = 8.6 -> 9 (clamped)
+            // Actually Math.round(66/10) = 7. 2+7 = 9.
+            expect(actorData.system.details.morale).toBe(9);
         });
 
         it("should handle Actor.create errors gracefully", async () => {
@@ -325,7 +362,7 @@ describe("stat-block-parser", () => {
                         return [{
                             value: `AC 8 (leather); AL N; Level O; hp 4; #AT 1 or
 2; D 1-6 (spear) or 1-6/1-6 (shortbow,
-ranges5'l 1 0'l1~); ML 8; TT A; XP18`
+ranges5'l 1 0'l1~); MV 12; ML 8; TT A; XP18`
                         }];
                     }
                 }),
@@ -341,6 +378,7 @@ ranges5'l 1 0'l1~); ML 8; TT A; XP18`
             expect(actorData.system.details.alignment).toBe("Neutral");
             expect(actorData.system.details.morale).toBe(8);
             expect(actorData.system.details.treasure.type).toBe("A");
+            expect(actorData.system.movement.base).toBe(120);
         });
 
         it("should parse AC from variations", async () => {

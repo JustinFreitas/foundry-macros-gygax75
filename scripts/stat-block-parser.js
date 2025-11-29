@@ -27,6 +27,23 @@ const parseHD = (text) => {
     return hdValue;
 };
 
+const calculateHPFromHD = (hdString) => {
+    // Calculate HP from HD using B/X rules
+    // Each HD is 1d8 (use average of 4), bonuses are per die
+    // Example: "2+1" = 2 dice * 4 + 2 dice * 1 = 10 HP
+    if (!hdString) return 1;
+
+    const parts = hdString.split('+');
+    const numDice = parseInt(parts[0]);
+    const bonusPerDie = parts.length > 1 ? parseInt(parts[1]) : 0;
+
+    // Special case for 0 HD
+    if (numDice === 0) return 1;
+
+    // Calculate: (number of dice * 4.5) + (number of dice * bonusPerDie)
+    return Math.floor((numDice * 4.5) + (numDice * bonusPerDie));
+};
+
 const parseTHAC0 = (text) => {
     const thac0Pattern = /THAC0?\s+(\d+)/i;
     const match = text.match(thac0Pattern);
@@ -110,11 +127,47 @@ const parseMorale = (text) => {
     return match ? parseInt(match[1]) : null;
 };
 
+const calculateMoraleFromHD = (hdString) => {
+    // Calculate Morale from HD using AD&D 1e rules mapped to B/X (2-12)
+    // Base 50% + 5%/HD above 1 + 1%/hp bonus
+    if (!hdString) return 7; // Default to 7 (50%) if no HD
+
+    const parts = hdString.split('+');
+    const numDice = parseInt(parts[0]);
+    const bonusHP = parts.length > 1 ? parseInt(parts[1]) : 0;
+
+    // Base 50%
+    let percentage = 50;
+
+    // +5% per HD above 1
+    if (numDice > 1) {
+        percentage += (numDice - 1) * 5;
+    }
+
+    // +1% per hit point above hit dice (the plus part)
+    percentage += bonusHP;
+
+    // Map percentage to 2-12 scale
+    // 50% -> 7, 100% -> 12, 0% -> 2
+    let morale = 2 + Math.round(percentage / 10);
+
+    // Clamp between 2 and 12
+    return Math.min(12, Math.max(2, morale));
+};
+
 const parseTreasureType = (text) => {
     // Match patterns like "TT A", "TT: B", "TT C, D"
     const treasurePattern = /TT\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
     const match = text.match(treasurePattern);
     return match ? match[1].trim() : null;
+};
+
+const parseMovement = (text) => {
+    // Match patterns like "MV 12", "MV: 9", "MV6"
+    // Value is in inches and needs to be multiplied by 10
+    const movementPattern = /MV\s*:?\s*(\d+)/i;
+    const match = text.match(movementPattern);
+    return match ? parseInt(match[1]) * 10 : null;
 };
 
 // Create the dialog
@@ -132,7 +185,7 @@ new Dialog({
       </div>
       <p style="font-size: 0.9em; color: #666;">
         <strong>Example:</strong><br/>
-        AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18
+        AC 8 (leather); MV 12; AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18
       </p>
     </form>
   `,
@@ -155,19 +208,30 @@ new Dialog({
 
                 // Parse the stat block
                 const ac = parseAC(statBlock);
-                const hp = parseHP(statBlock);
                 const hd = parseHD(statBlock);
+                let hp = parseHP(statBlock);
                 let thac0 = parseTHAC0(statBlock);
                 const attacks = parseAttacks(statBlock);
                 const damage = parseDamage(statBlock);
                 const xp = parseXP(statBlock);
                 const alignment = parseAlignment(statBlock);
-                const morale = parseMorale(statBlock);
+                let morale = parseMorale(statBlock);
                 const treasureType = parseTreasureType(statBlock);
+                const movement = parseMovement(statBlock);
+
+                // Calculate HP from HD if not present
+                if (hp === null) {
+                    hp = calculateHPFromHD(hd);
+                }
 
                 // Calculate THAC0 if not present
                 if (thac0 === null) {
                     thac0 = calculateTHAC0FromHD(hd);
+                }
+
+                // Calculate Morale if not present
+                if (morale === null) {
+                    morale = calculateMoraleFromHD(hd);
                 }
 
                 // Build actor data
@@ -185,6 +249,9 @@ new Dialog({
                         },
                         thac0: {
                             value: thac0 || 19
+                        },
+                        movement: {
+                            base: movement || 0
                         },
                         details: {
                             xp: xp || 0,
@@ -211,7 +278,7 @@ new Dialog({
 
                     // Log parsed values for debugging
                     console.log("Created monster with parsed values:", {
-                        ac, hp, hd, thac0, attacks, damage, xp, alignment, morale, treasureType
+                        ac, hp, hd, thac0, attacks, damage, xp, alignment, morale, treasureType, movement
                     });
                 } catch (error) {
                     ui.notifications.error(`Failed to create monster: ${error.message}`);
