@@ -6,10 +6,10 @@ const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/characte
 global.game = {
     actors: {
         _data: [],
-        filter: jest.fn(function(filterFn) {
+        filter: jest.fn(function (filterFn) {
             return this._data.filter(filterFn);
         }),
-        set: jest.fn(function(actors) {
+        set: jest.fn(function (actors) {
             this._data = actors;
         })
     }
@@ -45,7 +45,7 @@ describe("Character Name Format Check Macro", () => {
 
         eval(macroScript);
 
-        expect(global.console.log).toHaveBeenCalledWith("Bad Name: 'Alice'");
+        expect(global.console.log).toHaveBeenCalledWith("Bad Name Format: 'Alice'");
     });
 
     test("should log 'Bad Name' for a retainer without an employer", () => {
@@ -56,7 +56,7 @@ describe("Character Name Format Check Macro", () => {
 
         eval(macroScript);
 
-        expect(global.console.log).toHaveBeenCalledWith("Bad Name: 'Bob (Fighter)'");
+        expect(global.console.log).toHaveBeenCalledWith("Retainer missing employer: 'Bob (Fighter)'");
     });
 
     test("should not log anything for a valid retainer name", () => {
