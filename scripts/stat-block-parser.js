@@ -84,7 +84,8 @@ const parseAttacks = (text) => {
 
 const parseDamage = (text) => {
     // Match patterns like "D 1-6 (spear)", "Dmg: 1-6/1-6", "D: 2-8", "DAMAGE/ATTACK: 1-6"
-    const damagePattern = /(?:D(?:mg)?(?:amage)?(?:\/ATTACK)?)\s*:?\s*([\d\-\/]+(?:\s*\([^)]+\))?(?:\s+or\s+[\d\-\/]+(?:\s*\([^)]+\))?)*)/i;
+    // Use \b to avoid matching "D" in "HD"
+    const damagePattern = /\b(?:D(?:mg)?(?:amage)?(?:\/ATTACK)?)\s*:?\s*([\d\-\/]+(?:\s*\([^)]+\))?(?:\s+or\s+[\d\-\/]+(?:\s*\([^)]+\))?)*)/i;
     const match = text.match(damagePattern);
     return match ? match[1].trim() : null;
 };
@@ -274,6 +275,42 @@ const isADDStatBlock = (text) => {
     return addIndicators.some(pattern => pattern.test(text));
 };
 
+const parseAttackItems = (damageString) => {
+    if (!damageString) return [];
+
+    // Split by " or " to separate different attack routines/options
+    // e.g. "1-6 (spear) or 1-6/1-6 (shortbow)"
+    const parts = damageString.split(/\s+or\s+/i);
+    const items = [];
+
+    parts.forEach(part => {
+        let name = "Attack";
+        let damage = part.trim();
+
+        // Extract name from parentheses if present
+        // e.g. "1-6 (spear)" -> damage="1-6", name="spear"
+        const nameMatch = part.match(/(.*?)\s*\(([^)]+)\)/);
+        if (nameMatch) {
+            damage = nameMatch[1].trim();
+            name = nameMatch[2].trim();
+            // Capitalize first letter of name
+            name = name.charAt(0).toUpperCase() + name.slice(1);
+        }
+
+        items.push({
+            name: name,
+            type: "weapon", // Best guess for OSE/Foundry systems
+            system: {
+                damage: damage,
+                // We might want to add other fields like 'melee' or 'missile' if we could detect them
+                // For now, just the damage string is the most critical
+            }
+        });
+    });
+
+    return items;
+};
+
 const parseTreasureType = (text) => {
     // Match patterns like "TT A", "TT: B", "TT C, D", "TREASURE TYPE: E", "TREASURE TYPE: Nil"
     const treasurePattern = /(?:TT|TREASURE\s+TYPE)\s*:?\s*([^\r\n;]+)/i;
@@ -358,6 +395,9 @@ new Dialog({
                     xp = calculateXPFromHD(hd, isADD);
                 }
 
+                // Parse attack items
+                const attackItems = parseAttackItems(damage);
+
                 // Build actor data
                 const actorData = {
                     name: name,
@@ -385,10 +425,11 @@ new Dialog({
                                 type: treasureType || ""
                             }
                         }
-                    }
+                    },
+                    items: attackItems
                 };
 
-                // Store attacks and damage in actor data (may need adjustment based on OSE schema)
+                // Store attacks and damage in actor data (legacy/display support)
                 if (attacks !== null) {
                     actorData.system.attacks = attacks;
                 }

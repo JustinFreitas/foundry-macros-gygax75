@@ -346,6 +346,56 @@ DAMAGE/ATTACK: 1-6
             expect(actorData.system.details.xp).toBe(35);
         });
 
+        it("should create items for attacks", async () => {
+            require("../scripts/stat-block-parser");
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            const statBlock = "AC 7; HD 2; #AT 1; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8;";
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') return [{ value: "Test Monster" }];
+                    if (selector === '#stat-block') return [{ value: statBlock }];
+                }),
+            };
+
+            await callback(mockHtml);
+            const actorData = mockActor.create.mock.calls[mockActor.create.mock.calls.length - 1][0];
+
+            expect(actorData.items).toBeDefined();
+            expect(actorData.items.length).toBe(2);
+
+            expect(actorData.items[0].name).toBe("Spear");
+            expect(actorData.items[0].system.damage).toBe("1-6");
+
+            expect(actorData.items[1].name).toBe("Shortbow");
+            expect(actorData.items[1].system.damage).toBe("1-6/1-6");
+        });
+
+        it("should create default 'Attack' item if no name specified", async () => {
+            require("../scripts/stat-block-parser");
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            const statBlock = "AC 7; HD 2; #AT 1; D 1-6; ML 8;";
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') return [{ value: "Test Monster" }];
+                    if (selector === '#stat-block') return [{ value: statBlock }];
+                }),
+            };
+
+            await callback(mockHtml);
+            const actorData = mockActor.create.mock.calls[mockActor.create.mock.calls.length - 1][0];
+
+            expect(actorData.items).toBeDefined();
+            expect(actorData.items.length).toBe(1);
+            expect(actorData.items[0].name).toBe("Attack");
+            expect(actorData.items[0].system.damage).toBe("1-6");
+        });
+
         it("should handle undead morale logic (Wight)", async () => {
             require("../scripts/stat-block-parser");
 
