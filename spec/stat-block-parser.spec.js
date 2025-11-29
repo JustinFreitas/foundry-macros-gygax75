@@ -113,6 +113,13 @@ describe("stat-block-parser", () => {
             const match = statBlock.match(moralePattern);
             expect(match[1]).toBe("8");
         });
+
+        it("should parse treasure type from stat block", () => {
+            const statBlock = "AC 8; TT A; hp 4";
+            const treasurePattern = /TT\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
+            const match = statBlock.match(treasurePattern);
+            expect(match[1]).toBe("A");
+        });
     });
 
     describe("Dialog Creation", () => {
@@ -146,7 +153,7 @@ describe("stat-block-parser", () => {
                         return [{ value: "Bandit" }];
                     }
                     if (selector === '#stat-block') {
-                        return [{ value: "AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; XP18" }];
+                        return [{ value: "AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18" }];
                     }
                 }),
             };
@@ -166,6 +173,7 @@ describe("stat-block-parser", () => {
             expect(actorData.system.details.xp).toBe(18); // XP value
             expect(actorData.system.details.alignment).toBe("Neutral"); // Alignment converted from "N"
             expect(actorData.system.details.morale).toBe(8); // Morale value
+            expect(actorData.system.details.treasure.type).toBe("A"); // Treasure type
             expect(actorData.system.attacks).toBe(2); // Max of 1 or 2
             expect(actorData.system.damage).toMatch(/1-6.*spear.*1-6\/1-6.*shortbow/i);
 
@@ -249,6 +257,7 @@ describe("stat-block-parser", () => {
             expect(actorData.system.details.xp).toBe(0); // Default XP
             expect(actorData.system.details.alignment).toBe(""); // Default alignment
             expect(actorData.system.details.morale).toBe(0); // Default morale
+            expect(actorData.system.details.treasure.type).toBe(""); // Default treasure type
         });
 
         it("should calculate THAC0 from HD when THAC0 not in stat block", async () => {
@@ -316,7 +325,7 @@ describe("stat-block-parser", () => {
                         return [{
                             value: `AC 8 (leather); AL N; Level O; hp 4; #AT 1 or
 2; D 1-6 (spear) or 1-6/1-6 (shortbow,
-ranges5'l 1 0'l1~); ML 8; XP18`
+ranges5'l 1 0'l1~); ML 8; TT A; XP18`
                         }];
                     }
                 }),
@@ -331,6 +340,7 @@ ranges5'l 1 0'l1~); ML 8; XP18`
             expect(actorData.system.details.xp).toBe(18);
             expect(actorData.system.details.alignment).toBe("Neutral");
             expect(actorData.system.details.morale).toBe(8);
+            expect(actorData.system.details.treasure.type).toBe("A");
         });
 
         it("should parse AC from variations", async () => {

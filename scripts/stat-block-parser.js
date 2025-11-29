@@ -110,6 +110,13 @@ const parseMorale = (text) => {
     return match ? parseInt(match[1]) : null;
 };
 
+const parseTreasureType = (text) => {
+    // Match patterns like "TT A", "TT: B", "TT C, D"
+    const treasurePattern = /TT\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
+    const match = text.match(treasurePattern);
+    return match ? match[1].trim() : null;
+};
+
 // Create the dialog
 new Dialog({
     title: "Create Monster from Stat Block",
@@ -125,7 +132,7 @@ new Dialog({
       </div>
       <p style="font-size: 0.9em; color: #666;">
         <strong>Example:</strong><br/>
-        AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; XP18
+        AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; TT A; XP18
       </p>
     </form>
   `,
@@ -156,6 +163,7 @@ new Dialog({
                 const xp = parseXP(statBlock);
                 const alignment = parseAlignment(statBlock);
                 const morale = parseMorale(statBlock);
+                const treasureType = parseTreasureType(statBlock);
 
                 // Calculate THAC0 if not present
                 if (thac0 === null) {
@@ -181,7 +189,10 @@ new Dialog({
                         details: {
                             xp: xp || 0,
                             alignment: alignment || "",
-                            morale: morale || 0
+                            morale: morale || 0,
+                            treasure: {
+                                type: treasureType || ""
+                            }
                         }
                     }
                 };
@@ -200,7 +211,7 @@ new Dialog({
 
                     // Log parsed values for debugging
                     console.log("Created monster with parsed values:", {
-                        ac, hp, hd, thac0, attacks, damage, xp, alignment, morale
+                        ac, hp, hd, thac0, attacks, damage, xp, alignment, morale, treasureType
                     });
                 } catch (error) {
                     ui.notifications.error(`Failed to create monster: ${error.message}`);
