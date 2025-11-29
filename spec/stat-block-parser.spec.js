@@ -300,6 +300,52 @@ vision`;
             expect(actorData.system.hp.max).toBe(50);
         });
 
+        it("should calculate default XP for B/X stat block if missing", async () => {
+            require("../scripts/stat-block-parser");
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            // B/X Stat Block (HD 2 -> 20 XP)
+            const statBlock = "AC 7; HD 2; #AT 1; D 1-6; ML 8;";
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') return [{ value: "Test Monster" }];
+                    if (selector === '#stat-block') return [{ value: statBlock }];
+                }),
+            };
+
+            await callback(mockHtml);
+            const actorData = mockActor.create.mock.calls[mockActor.create.mock.calls.length - 1][0];
+            expect(actorData.system.details.xp).toBe(20);
+        });
+
+        it("should calculate default XP for AD&D stat block if missing", async () => {
+            require("../scripts/stat-block-parser");
+            const dialogConfig = mockDialog.mock.calls[0][0];
+            const callback = dialogConfig.buttons.create.callback;
+
+            // AD&D Stat Block (HD 2 -> 20 XP, but let's try 2+1 -> 35 XP)
+            // AD&D 2+1 is 35 XP base. B/X 2+1 is 25 XP.
+            const statBlock = `
+ARMOR CLASS: 7
+HIT DICE: 2+1
+NO. OF ATTACKS: 1
+DAMAGE/ATTACK: 1-6
+            `;
+
+            const mockHtml = {
+                find: jest.fn((selector) => {
+                    if (selector === '#monster-name') return [{ value: "Test Monster" }];
+                    if (selector === '#stat-block') return [{ value: statBlock }];
+                }),
+            };
+
+            await callback(mockHtml);
+            const actorData = mockActor.create.mock.calls[mockActor.create.mock.calls.length - 1][0];
+            expect(actorData.system.details.xp).toBe(35);
+        });
+
         it("should handle undead morale logic (Wight)", async () => {
             require("../scripts/stat-block-parser");
 

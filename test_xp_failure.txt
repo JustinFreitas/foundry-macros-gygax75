@@ -1,0 +1,174 @@
+
+> foundry-macros-gygax75@1.0.0 test
+> jest stat-block-parser.spec.js
+
+FAIL spec/stat-block-parser.spec.js
+  stat-block-parser
+    Parsing Functions
+      ΓêÜ should parse AC from stat block (4 ms)
+      ΓêÜ should parse HP from stat block (1 ms)
+      ΓêÜ should parse HD from stat block with HD notation (1 ms)
+      ΓêÜ should parse damage from stat block (1 ms)
+      ΓêÜ should handle THAC0 if present in stat block (1 ms)
+      ΓêÜ should parse XP from stat block (1 ms)
+      ΓêÜ should parse alignment and convert abbreviation to full name (1 ms)
+      ΓêÜ should parse morale from stat block (1 ms)
+      ΓêÜ should calculate morale from HD when ML not present
+      ΓêÜ should parse treasure type from stat block (1 ms)
+      ΓêÜ should parse movement and multiply by 10 (1 ms)
+    Dialog Creation
+      ΓêÜ should create and render a dialog when script executes (7 ms)
+    Monster Creation
+      ΓêÜ should create a monster actor with parsed stats including XP and alignment (4 ms)
+      ├ù should parse Treasure Type from AD&D stat block (2 ms)
+      ├ù should parse various Treasure Type formats (2 ms)
+      ├ù should use explicit HP if present in stat block (2 ms)
+      ├ù should prioritize explicit HP over calculated HP (2 ms)
+      ├ù should calculate default XP for B/X stat block if missing (1 ms)
+      ├ù should calculate default XP for AD&D stat block if missing (1 ms)
+      ├ù should handle undead morale logic (Wight) (1 ms)
+      ├ù should handle Actor.create errors gracefully (1 ms)
+    Edge Cases
+      ΓêÜ should handle multi-line stat blocks (5 ms)
+      ├ù should parse AC from variations (1 ms)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should parse Treasure Type from AD&D stat block
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:219:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should parse various Treasure Type formats
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:244:23)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should use explicit HP if present in stat block
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:267:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should prioritize explicit HP over calculated HP
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:297:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should calculate default XP for B/X stat block if missing
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:318:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should calculate default XP for AD&D stat block if missing
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:344:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should handle undead morale logic (Wight)
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:387:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Monster Creation ΓÇ║ should handle Actor.create errors gracefully
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:426:19)
+
+  ΓùÅ stat-block-parser ΓÇ║ Edge Cases ΓÇ║ should parse AC from variations
+
+    TypeError: Assignment to constant variable.
+
+      356 |                 if (xp === null) {
+      357 |                     const isADD = isADDStatBlock(statBlock);
+    > 358 |                     xp = calculateXPFromHD(hd, isADD);
+          |                       ^
+      359 |                 }
+      360 |
+      361 |                 // Build actor data
+
+      at callback (scripts/stat-block-parser.js:358:23)
+      at Object.callback (spec/stat-block-parser.spec.js:488:23)
+
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 14 passed, 23 total
+Snapshots:   0 total
+Time:        1.188 s
+Ran all test suites matching stat-block-parser.spec.js.

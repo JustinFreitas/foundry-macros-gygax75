@@ -175,6 +175,105 @@ const calculateMoraleFromHD = (hdString, name = "") => {
     return Math.min(12, Math.max(2, morale));
 };
 
+const calculateXPFromHD = (hdString, isADD = false) => {
+    if (!hdString) return 0;
+
+    const parts = hdString.split('+');
+    const numDice = parseInt(parts[0]);
+    const bonusHP = parts.length > 1 ? parseInt(parts[1]) : 0;
+
+    // Treat "0" HD (Normal Human) as < 1 HD
+    if (numDice === 0) return 5; // Simple default for < 1 HD
+
+    // B/X XP Table (OSE)
+    // HD: Base XP (Bonus XP for special abilities not included in this base calc)
+    // < 1: 5
+    // 1: 10
+    // 1+: 15
+    // 2: 20
+    // 2+: 25
+    // 3: 35
+    // 3+: 50
+    // 4: 75
+    // 4+: 125
+    // 5: 175
+    // 5+: 225
+    // 6: 275
+    // 6+: 350
+    // 7: 450
+    // 8: 650
+    // 9: 900
+    // 10: 1600
+    // 11: 1900
+    // 12: 2300
+    // 13: 2700
+    // 14: 3100
+    // 15: 3500
+    // 16+: 4000 (cap for now)
+
+    // AD&D 1e XP Table (DMG p.85) - Base Value only
+    // Under 1-1: 5
+    // 1-1 to 1: 10
+    // 1+1 to 2: 20
+    // 2+1 to 3: 35
+    // 3+1 to 4: 60
+    // 4+1 to 5: 90
+    // 5+1 to 6: 150
+    // 6+1 to 7: 225
+    // 7+1 to 8: 375
+    // 8+1 to 9: 600
+    // 9+1 to 10+: 900
+    // 11+: 1300 approx
+
+    if (isADD) {
+        // AD&D Logic (Simplified Base)
+        if (numDice < 1) return 5;
+        if (numDice === 1) return bonusHP > 0 ? 20 : 10;
+        if (numDice === 2) return bonusHP > 0 ? 35 : 20;
+        if (numDice === 3) return bonusHP > 0 ? 60 : 35;
+        if (numDice === 4) return bonusHP > 0 ? 90 : 60;
+        if (numDice === 5) return bonusHP > 0 ? 150 : 90;
+        if (numDice === 6) return bonusHP > 0 ? 225 : 150;
+        if (numDice === 7) return bonusHP > 0 ? 375 : 225;
+        if (numDice === 8) return bonusHP > 0 ? 600 : 375;
+        if (numDice === 9) return bonusHP > 0 ? 900 : 600;
+        if (numDice >= 10) return 900 + ((numDice - 9) * 100); // Rough extrapolation
+        return 10;
+    } else {
+        // B/X Logic
+        if (numDice < 1) return 5;
+        if (numDice === 1) return bonusHP > 0 ? 15 : 10;
+        if (numDice === 2) return bonusHP > 0 ? 25 : 20;
+        if (numDice === 3) return bonusHP > 0 ? 50 : 35;
+        if (numDice === 4) return bonusHP > 0 ? 125 : 75;
+        if (numDice === 5) return bonusHP > 0 ? 225 : 175;
+        if (numDice === 6) return bonusHP > 0 ? 350 : 275;
+        if (numDice === 7) return 450; // 7+ usually falls here or next? OSE says 7 is 450.
+        if (numDice === 8) return 650;
+        if (numDice === 9) return 900;
+        if (numDice === 10) return 1600;
+        if (numDice === 11) return 1900;
+        if (numDice === 12) return 2300;
+        if (numDice === 13) return 2700;
+        if (numDice === 14) return 3100;
+        if (numDice === 15) return 3500;
+        if (numDice >= 16) return 4000;
+        return 10;
+    }
+};
+
+const isADDStatBlock = (text) => {
+    // Check for AD&D specific labels
+    const addIndicators = [
+        /ARMOR\s+CLASS:/i,
+        /HIT\s+DICE:/i,
+        /NO\.\s+OF\s+ATTACKS:/i,
+        /DAMAGE\/ATTACK:/i,
+        /TREASURE\s+TYPE:/i
+    ];
+    return addIndicators.some(pattern => pattern.test(text));
+};
+
 const parseTreasureType = (text) => {
     // Match patterns like "TT A", "TT: B", "TT C, D", "TREASURE TYPE: E", "TREASURE TYPE: Nil"
     const treasurePattern = /(?:TT|TREASURE\s+TYPE)\s*:?\s*([^\r\n;]+)/i;
@@ -232,7 +331,7 @@ new Dialog({
                 let thac0 = parseTHAC0(statBlock);
                 const attacks = parseAttacks(statBlock);
                 const damage = parseDamage(statBlock);
-                const xp = parseXP(statBlock);
+                let xp = parseXP(statBlock);
                 const alignment = parseAlignment(statBlock);
                 let morale = parseMorale(statBlock);
                 const treasureType = parseTreasureType(statBlock);
@@ -251,6 +350,12 @@ new Dialog({
                 // Calculate Morale if not present
                 if (morale === null) {
                     morale = calculateMoraleFromHD(hd, name);
+                }
+
+                // Calculate XP if not present
+                if (xp === null) {
+                    const isADD = isADDStatBlock(statBlock);
+                    xp = calculateXPFromHD(hd, isADD);
                 }
 
                 // Build actor data
