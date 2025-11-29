@@ -136,7 +136,17 @@ const parseMorale = (text) => {
     return match ? parseInt(match[1]) : null;
 };
 
-const calculateMoraleFromHD = (hdString) => {
+const calculateMoraleFromHD = (hdString, name = "") => {
+    // Check for common undead names first
+    const undeadKeywords = [
+        "skeleton", "zombie", "ghoul", "ghast", "wight", "wraith",
+        "mummy", "spectre", "vampire", "ghost", "shadow", "lich"
+    ];
+
+    if (name && undeadKeywords.some(keyword => name.toLowerCase().includes(keyword))) {
+        return 12;
+    }
+
     // Calculate Morale from HD using AD&D 1e rules mapped to B/X (2-12)
     // Base 50% + 5%/HD above 1 + 1%/hp bonus
     if (!hdString) return 7; // Default to 7 (50%) if no HD
@@ -240,7 +250,7 @@ new Dialog({
 
                 // Calculate Morale if not present
                 if (morale === null) {
-                    morale = calculateMoraleFromHD(hd);
+                    morale = calculateMoraleFromHD(hd, name);
                 }
 
                 // Build actor data
