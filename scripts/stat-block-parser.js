@@ -103,6 +103,13 @@ const parseAlignment = (text) => {
     return alignmentMap[abbreviation] || abbreviation;
 };
 
+const parseMorale = (text) => {
+    // Match patterns like "ML 8", "ML: 12", "ML9"
+    const moralePattern = /ML\s*:?\s*(\d+)/i;
+    const match = text.match(moralePattern);
+    return match ? parseInt(match[1]) : null;
+};
+
 // Create the dialog
 new Dialog({
     title: "Create Monster from Stat Block",
@@ -118,7 +125,7 @@ new Dialog({
       </div>
       <p style="font-size: 0.9em; color: #666;">
         <strong>Example:</strong><br/>
-        AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); XP18
+        AC 8 (leather); AL N; Level O; hp 4; #AT 1 or 2; D 1-6 (spear) or 1-6/1-6 (shortbow); ML 8; XP18
       </p>
     </form>
   `,
@@ -148,6 +155,7 @@ new Dialog({
                 const damage = parseDamage(statBlock);
                 const xp = parseXP(statBlock);
                 const alignment = parseAlignment(statBlock);
+                const morale = parseMorale(statBlock);
 
                 // Calculate THAC0 if not present
                 if (thac0 === null) {
@@ -172,7 +180,8 @@ new Dialog({
                         },
                         details: {
                             xp: xp || 0,
-                            alignment: alignment || ""
+                            alignment: alignment || "",
+                            morale: morale || 0
                         }
                     }
                 };
@@ -191,7 +200,7 @@ new Dialog({
 
                     // Log parsed values for debugging
                     console.log("Created monster with parsed values:", {
-                        ac, hp, hd, thac0, attacks, damage, xp, alignment
+                        ac, hp, hd, thac0, attacks, damage, xp, alignment, morale
                     });
                 } catch (error) {
                     ui.notifications.error(`Failed to create monster: ${error.message}`);
