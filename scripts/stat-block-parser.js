@@ -11,7 +11,8 @@ const parseAC = (text) => {
 };
 
 const parseHP = (text) => {
-    const hpPattern = /hp\s+(\d+)/i;
+    // Match patterns like "hp 4", "HP: 4", "hp: 16", "HIT POINTS: 50"
+    const hpPattern = /(?:hp|HIT\s+POINTS)\s*:?\s*(\d+)/i;
     const match = text.match(hpPattern);
     return match ? parseInt(match[1]) : null;
 };
@@ -175,8 +176,8 @@ const calculateMoraleFromHD = (hdString, name = "") => {
 };
 
 const parseTreasureType = (text) => {
-    // Match patterns like "TT A", "TT: B", "TT C, D", "TREASURE TYPE: E"
-    const treasurePattern = /(?:TT|TREASURE\s+TYPE)\s*:?\s*([A-Z](?:\s*,\s*[A-Z])*)/i;
+    // Match patterns like "TT A", "TT: B", "TT C, D", "TREASURE TYPE: E", "TREASURE TYPE: Nil"
+    const treasurePattern = /(?:TT|TREASURE\s+TYPE)\s*:?\s*([^\r\n;]+)/i;
     const match = text.match(treasurePattern);
     return match ? match[1].trim() : null;
 };
@@ -224,7 +225,6 @@ new Dialog({
                     ui.notifications.error("Please paste a stat block.");
                     return;
                 }
-
                 // Parse the stat block
                 const ac = parseAC(statBlock);
                 const hd = parseHD(statBlock);
