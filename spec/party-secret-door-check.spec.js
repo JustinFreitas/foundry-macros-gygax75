@@ -16,11 +16,20 @@ describe('party-secret-door-check', () => {
         filter: () => [],
       },
       userId: 'test-user',
+      togglePause: jest.fn(),
     };
 
     // Mock the ChatMessage class
     global.ChatMessage = {
       create: jest.fn(),
+      getWhisperRecipients: jest.fn().mockReturnValue(['test-user']),
+    };
+
+    // Mock the ui object
+    global.ui = {
+      notifications: {
+        warn: jest.fn(),
+      },
     };
 
     // Mock the Roll class
@@ -29,16 +38,13 @@ describe('party-secret-door-check', () => {
     }));
   });
 
-  it('should create a chat message with "No actors in the party to search!" if there are no party actors', async () => {
+  it('should warn if there are no party actors', async () => {
     const script = `(async () => {${scriptContent}})()`;
     await eval(script);
-    expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h2>Party Secret Door Check</h2><br/>No actors in the party to search!',
-      whisper: ['test-user'],
-    });
+    expect(global.ui.notifications.warn).toHaveBeenCalledWith("No actors in the party to search!");
   });
 
-  it('should create a chat message with secret door check results (no secret doors found)', async () => {
+  it('should use the best chance in the party (standard)', async () => {
     const actor1 = {
       flags: { ose: { party: true } },
       name: 'Actor 1',
@@ -46,63 +52,66 @@ describe('party-secret-door-check', () => {
     };
     const actor2 = {
       flags: { ose: { party: true } },
-      name: 'Actor 2',
+      name: 'Actor 2', // Best chance
       system: { exploration: { sd: 2 }, details: { class: 'Rogue' } },
     };
     global.game.actors.filter = (fn) => [actor1, actor2].filter(fn);
+
+    // Roll 2 (success for Actor 2, fail for Actor 1) - Should succeed because we take best
     global.Roll.mockImplementationOnce(() => ({ evaluate: jest.fn().mockResolvedValue({ result: 2 }) }));
+
+    const script = `(async () => {${scriptContent}})()`;
+    await eval(script);
+
+    expect(global.ChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('<b>Rolled:</b> 2 vs target 2 (Best: Actor 2)'),
+    }));
+    expect(global.ChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('<b>RESULT: Secret Door Found!</b>'),
+    }));
+    // expect(global.game.togglePause).toHaveBeenCalledWith(true, true);
+  });
+
+  it('should use the best chance in the party (elf houserule)', async () => {
+    const actor1 = {
+      flags: { ose: { party: true } },
+      name: 'Elf',
+      system: { exploration: { sd: 1 }, details: { class: 'Elf' } }, // Sheet says 1, Should be treated as 3
+    };
+    global.game.actors.filter = (fn) => [actor1].filter(fn);
+
+    // Roll 3 (Success for target 3)
     global.Roll.mockImplementationOnce(() => ({ evaluate: jest.fn().mockResolvedValue({ result: 3 }) }));
 
     const script = `(async () => {${scriptContent}})()`;
     await eval(script);
-    expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h2>Party Secret Door Check</h2><b>Actor 1:</b>  roll: 2 chance: 1<br/><br/><b>Actor 2:</b>  roll: 3 chance: 2<br/>',
-      whisper: ['test-user'],
-    });
+
+    expect(global.ChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('<b>Rolled:</b> 3 vs target 3 (Best: Elf)'),
+    }));
+    // expect(global.game.togglePause).toHaveBeenCalledWith(true, true);
   });
 
-  it('should create a chat message with secret door check results (secret doors found)', async () => {
+  it('should fail if roll is higher than best chance', async () => {
     const actor1 = {
       flags: { ose: { party: true } },
-      name: 'Actor 1',
-      system: { exploration: { sd: 3 }, details: { class: 'Fighter' } },
+      name: 'Fighter',
+      system: { exploration: { sd: 1 }, details: { class: 'Fighter' } },
     };
-    const actor2 = {
-      flags: { ose: { party: true } },
-      name: 'Actor 2',
-      system: { exploration: { sd: 1 }, details: { class: 'Rogue' } },
-    };
-    global.game.actors.filter = (fn) => [actor1, actor2].filter(fn);
+    global.game.actors.filter = (fn) => [actor1].filter(fn);
+
+    // Roll 2 (Fail for target 1)
     global.Roll.mockImplementationOnce(() => ({ evaluate: jest.fn().mockResolvedValue({ result: 2 }) }));
-    global.Roll.mockImplementationOnce(() => ({ evaluate: jest.fn().mockResolvedValue({ result: 1 }) }));
 
     const script = `(async () => {${scriptContent}})()`;
     await eval(script);
-    expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h2>Party Secret Door Check</h2><b>Actor 1:</b>  roll: 2 chance: 3 - <b>Found a secret door!</b><br/><br/><b>Actor 2:</b>  roll: 1 chance: 1 - <b>Found a secret door!</b><br/>',
-      whisper: ['test-user'],
-    });
-  });
 
-  it('should filter out non-humanoid party actors', async () => {
-    const humanoid = {
-      flags: { ose: { party: true } },
-      name: 'Humanoid',
-      system: { details: { class: 'Fighter' }, exploration: { sd: 1 } },
-    };
-    const mule = {
-      flags: { ose: { party: true } },
-      name: 'Mule',
-      system: { details: { class: 'Mule' }, exploration: { sd: 1 } },
-    };
-    global.game.actors.filter = (fn) => [humanoid, mule].filter(fn);
-    global.Roll.mockImplementationOnce(() => ({ evaluate: jest.fn().mockResolvedValue({ result: 1 }) }));
-
-    const script = `(async () => {${scriptContent}})()`;
-    await eval(script);
-    expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h2>Party Secret Door Check</h2><b>Humanoid:</b>  roll: 1 chance: 1 - <b>Found a secret door!</b><br/>',
-      whisper: ['test-user'],
-    });
+    expect(global.ChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('<b>Rolled:</b> 2 vs target 1'),
+    }));
+    expect(global.ChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('RESULT: Secret Door Not Found'),
+    }));
+    expect(global.game.togglePause).not.toHaveBeenCalled();
   });
 });

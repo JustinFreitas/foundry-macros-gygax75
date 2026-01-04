@@ -1,26 +1,36 @@
-let partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true).filter(a => !['Riding Horse', 'War Horse', 'Mule'].includes(a.system.details.class));
-const resultMap = new Map();
+let partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true);
+let bestChance = 0;
+let bestActorName = 'None';
+
 for (const actor of partySheetActors) {
-    const secretDoorChance = actor.system?.exploration?.sd || 1;
-    const {result} = await new Roll('1d6').evaluate();
-    resultMap.set(actor.name, {result, secretDoorChance: secretDoorChance});
-};
-
-let content = '<h2>Party Secret Door Check</h2>'
-if (resultMap.keys().toArray().length > 0) {
-    const collatedResults = [];
-    for (const actorName of resultMap.keys()) {
-        const result = resultMap.get(actorName);
-        const text = `roll: ${result.result} chance: ${result.secretDoorChance}${result.result <= result.secretDoorChance ? ' - <b>Found a secret door!</b>' : ''}`;
-        collatedResults.push(`<b>${actorName}:</b>  ${text}<br/>`);
-    };
-
-    content = content + collatedResults.join('<br/>');
-} else {
-    content = `${content}<br/>No actors in the party to search!`;
+    let chance = actor.system?.exploration?.sd || 1;
+    if (actor.system?.details?.class === 'Elf') {
+        chance = Math.max(chance, 3);
+    }
+    if (chance > bestChance) {
+        bestChance = chance;
+        bestActorName = actor.name;
+    }
 }
 
-await ChatMessage.create({
-    content,
-    whisper: [game.userId]
-});
+if (partySheetActors.length === 0) {
+    ui.notifications.warn("No actors in the party to search!");
+} else {
+    const { result } = await new Roll('1d6').evaluate();
+    const success = result <= bestChance;
+
+    let content = `<h2>Party Secret Door Check</h2>`;
+    content += `<b>Rolled:</b> ${result} vs target ${bestChance} (Best: ${bestActorName})<br/>`;
+
+    if (success) {
+        content += `<b>RESULT: Secret Door Found!</b>`;
+        // game.togglePause(true, true);
+    } else {
+        content += `RESULT: Secret Door Not Found.`;
+    }
+
+    await ChatMessage.create({
+        content,
+        whisper: ChatMessage.getWhisperRecipients("GM")
+    });
+}
