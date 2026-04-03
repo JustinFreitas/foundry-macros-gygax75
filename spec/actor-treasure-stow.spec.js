@@ -43,6 +43,13 @@ describe('actor-treasure-stow.js', () => {
     global.foundry = {
         utils: {
             randomID: jest.fn(() => "mockID")
+        },
+        applications: {
+            api: {
+                DialogV2: {
+                    wait: jest.fn()
+                }
+            }
         }
     };
     global.randomID = jest.fn(() => "mockID_legacy");

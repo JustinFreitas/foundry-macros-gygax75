@@ -326,8 +326,37 @@ const parseMovement = (text) => {
     return match ? parseInt(match[1]) * 10 : null;
 };
 
+/**
+ * Dual Version Shim: Works in V13 (Dialog) and V14 (DialogV2).
+ */
+async function dialogWaitShim({ title, content, buttons, defaultButton, ...options } = {}) {
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+
+  if (DialogV2) {
+    return await DialogV2.wait({
+      window: { title, ...options.window },
+      content: content,
+      buttons: Object.entries(buttons).map(([id, btn]) => ({
+        action: id,
+        label: btn.label,
+        icon: btn.icon,
+        default: id === defaultButton,
+        callback: (event, button, dialog) => {
+          return btn.callback ? btn.callback(dialog.element) : id;
+        }
+      })),
+      rejectClose: false,
+      ...options
+    });
+  }
+
+  return await Dialog.wait({
+    title, content, buttons, default: defaultButton
+  }, options);
+}
+
 // Create the dialog
-new Dialog({
+dialogWaitShim({
     title: "Create Monster from Stat Block",
     content: `
     <form>
@@ -349,8 +378,9 @@ new Dialog({
         create: {
             label: "Create Monster",
             callback: async (html) => {
-                const name = html.find('#monster-name')[0].value.trim();
-                const statBlock = html.find('#stat-block')[0].value.trim();
+                const htmlDom = html instanceof jQuery ? html[0] : html;
+                const name = htmlDom.querySelector('#monster-name').value.trim();
+                const statBlock = htmlDom.querySelector('#stat-block').value.trim();
 
                 if (!name) {
                     ui.notifications.error("Please enter a monster name.");
@@ -455,5 +485,5 @@ new Dialog({
             label: "Cancel"
         }
     },
-    default: "create"
-}).render(true);
+    defaultButton: "create"
+});

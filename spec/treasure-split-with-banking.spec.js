@@ -48,7 +48,9 @@ describe('TreasureSplitWithBanking', () => {
 
         game = {
             actors: {
-                filter: jest.fn().mockReturnValue([actor1, actor2]),
+                _data: [actor1, actor2],
+                filter: jest.fn(function(fn) { return this._data.filter(fn); }),
+                forEach: jest.fn(function(fn) { return this._data.forEach(fn); }),
                 get: jest.fn().mockImplementation((id) => {
                     if (id === 'actor1') return actor1;
                     if (id === 'actor2') return actor2;
@@ -56,24 +58,42 @@ describe('TreasureSplitWithBanking', () => {
                 })
             }
         };
+        global.game = game;
 
         ChatMessage = {
             create: jest.fn()
         };
 
-        global.game = game;
         global.ChatMessage = ChatMessage;
         global.ui = { notifications: { info: jest.fn() } };
 
-        global.Dialog = jest.fn().mockImplementation((dialogData) => {
-            // Capture the callback to run it manually in tests
-            if (dialogData.buttons && dialogData.buttons.calculate) {
-                capturedCallback = dialogData.buttons.calculate.callback;
+        global.foundry = {
+            applications: {
+                api: {
+                    DialogV2: {
+                        wait: jest.fn().mockImplementation((dialogData) => {
+                            if (dialogData.buttons) {
+                                // V2 buttons are an array
+                                const calcBtn = dialogData.buttons.find(b => b.action === 'calculate');
+                                if (calcBtn) capturedCallback = calcBtn.callback;
+                            }
+                            return Promise.resolve(null);
+                        })
+                    }
+                }
             }
-            return {
-                render: jest.fn()
-            };
-        });
+        };
+
+        global.Dialog = {
+            wait: jest.fn().mockImplementation((dialogData) => {
+                if (dialogData.buttons && dialogData.buttons.calculate) {
+                    capturedCallback = dialogData.buttons.calculate.callback;
+                }
+                return Promise.resolve(null);
+            })
+        };
+
+        global.jQuery = jest.fn();
     });
 
     test('should correctly calculate and update bank totals for multiple actors', async () => {
@@ -82,14 +102,20 @@ describe('TreasureSplitWithBanking', () => {
 
         // 2. Prepare the mock HTML input
         const mockHtml = {
-            find: jest.fn().mockReturnValue([
+            querySelectorAll: jest.fn().mockReturnValue([
+                { value: '50', name: 'actor1' },
+                { value: '25', name: 'actor2' }
+            ]),
+            find: jest.fn().mockReturnValue([ // Fallback for any remaining .find calls
                 { value: '50', name: 'actor1' },
                 { value: '25', name: 'actor2' }
             ])
         };
 
         // 3. Execute the callback
-        await capturedCallback(mockHtml);
+        // The script handles both jQuery (V1) and raw DOM (V2).
+        // Since we are mocking DialogV2, we must pass the dialog object as the third argument.
+        await capturedCallback({}, {}, { element: mockHtml });
 
         // 4. Verify updates
         expect(bankItem1.update).toHaveBeenCalledWith({ system: { quantity: { value: 150 } } });
@@ -110,13 +136,13 @@ describe('TreasureSplitWithBanking', () => {
         eval(macroScript);
 
         const mockHtml = {
-            find: jest.fn().mockReturnValue([
+            querySelectorAll: jest.fn().mockReturnValue([
                 { value: '50', name: 'actor1' },
                 { value: '25', name: 'actor2' }
             ])
         };
 
-        await capturedCallback(mockHtml);
+        await capturedCallback({}, {}, { element: mockHtml });
 
         // Verify: actor1 updated, actor2 skipped
         expect(bankItem1.update).toHaveBeenCalledWith({ system: { quantity: { value: 150 } } });
@@ -132,13 +158,18 @@ describe('TreasureSplitWithBanking', () => {
         eval(macroScript);
 
         const mockHtml = {
-            find: jest.fn().mockReturnValue([
-                { value: '0', name: 'actor1' },
-                { value: '-10', name: 'actor2' }
-            ])
+            querySelectorAll: jest.fn((selector) => {
+                if (selector === 'input') {
+                    return [
+                        { value: '0', name: 'actor1' },
+                        { value: '-10', name: 'actor2' }
+                    ];
+                }
+                return [];
+            })
         };
 
-        await capturedCallback(mockHtml);
+        await capturedCallback({}, {}, { element: mockHtml });
 
         // Verify: No updates called
         expect(bankItem1.update).not.toHaveBeenCalled();
@@ -150,21 +181,15 @@ describe('TreasureSplitWithBanking', () => {
     });
 
     test('should report when no eligible characters are in the party', async () => {
-        game.actors.filter.mockReturnValue([]);
+        global.game.actors.filter.mockReturnValue([]);
 
         eval(macroScript);
 
         const mockHtml = {
-            find: jest.fn().mockReturnValue([])
+            querySelectorAll: jest.fn().mockReturnValue([])
         };
 
-        // The callback might not even run if the script logic prevents it, 
-        // but the script creates the Dialog even if list is empty?
-        // Script: `partyActors.forEach...` -> empty form.
-        // Dialog created. User clicks Process.
-        // inputs is empty.
-
-        await capturedCallback(mockHtml);
+        await capturedCallback({}, {}, { element: mockHtml });
 
         // inputs loop doesn't run.
         // updates is empty.

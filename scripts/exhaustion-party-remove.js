@@ -1,4 +1,4 @@
-const exhaustedEffectId = CONFIG.statusEffects.find((el)=>el.name?.includes('Exhausted'))?.id || 'downgrade';
+const exhaustedEffectId = (Array.isArray(CONFIG.statusEffects) ? CONFIG.statusEffects : Object.values(CONFIG.statusEffects)).find((el)=>el.name?.includes('Exhausted'))?.id || 'downgrade';
 const nameToBonusAndWeaponsTupleMap = new Map();
 const bonus = 1;
 const partySheetActors = game.actors.filter(actor => actor.flags.ose?.party === true);

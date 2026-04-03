@@ -16,15 +16,46 @@ partyActors.forEach(actor => {
 });
 formHtml.push('</form>');
 
-new Dialog({
+/**
+ * Dual Version Shim: Works in V13 (Dialog) and V14 (DialogV2).
+ */
+async function dialogWaitShim({ title, content, buttons, defaultButton, ...options } = {}) {
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+
+  if (DialogV2) {
+    return await DialogV2.wait({
+      window: { title, ...options.window },
+      content: content,
+      buttons: Object.entries(buttons).map(([id, btn]) => ({
+        action: id,
+        label: btn.label,
+        icon: btn.icon,
+        default: id === defaultButton,
+        callback: (event, button, dialog) => {
+          return btn.callback ? btn.callback(dialog.element) : id;
+        }
+      })),
+      rejectClose: false,
+      ...options
+    });
+  }
+
+  return await Dialog.wait({
+    title, content, buttons, default: defaultButton
+  }, options);
+}
+
+dialogWaitShim({
     title: "Character Banking Additions",
     content: formHtml.join(''),
     buttons: {
         calculate: {
             label: "Process Banking",
             callback: async (html) => {
+                const HTML = html instanceof jQuery ? html[0] : html;
+                const inputs = HTML.querySelectorAll('input.character-deposit');
+
                 const BANK_NAME = 'GP (Bank)';
-                const inputs = html.find('input.character-deposit');
                 const updates = [];
                 const logs = ['<h2>Character Treasure Split</h2>'];
 
@@ -62,5 +93,5 @@ new Dialog({
         },
         close: { label: "Close" }
     },
-    default: "calculate"
-}).render(true);
+    defaultButton: "calculate"
+});

@@ -1,4 +1,4 @@
-const blessEffectId = CONFIG.statusEffects.find((el)=>el.name?.includes('Bless'))?.id || 'bless';
+const blessEffectId = (Array.isArray(CONFIG.statusEffects) ? CONFIG.statusEffects : Object.values(CONFIG.statusEffects)).find((el)=>el.name?.includes('Bless'))?.id || 'bless';
 const tokens = canvas.tokens.controlled;
 const nameToBonusAndWeaponsTupleMap = new Map();
 for (const token of tokens) {

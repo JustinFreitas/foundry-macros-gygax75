@@ -25,6 +25,35 @@ async function consolidateContainer(actor, container) {
     }
 }
 
+/**
+ * Dual Version Shim: Works in V13 (Dialog) and V14 (DialogV2).
+ */
+async function dialogWaitShim({ title, content, buttons, defaultButton, ...options } = {}) {
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+
+  if (DialogV2) {
+    return await DialogV2.wait({
+      window: { title, ...options.window },
+      content: content,
+      buttons: Object.entries(buttons).map(([id, btn]) => ({
+        action: id,
+        label: btn.label,
+        icon: btn.icon,
+        default: id === defaultButton,
+        callback: (event, button, dialog) => {
+          return btn.callback ? btn.callback(dialog.element) : id;
+        }
+      })),
+      rejectClose: false,
+      ...options
+    });
+  }
+
+  return await Dialog.wait({
+    title, content, buttons, default: defaultButton
+  }, options);
+}
+
 if (typeof window !== 'undefined' && typeof Hooks !== 'undefined' && !window.stowTreasureHookRegistered) {
     Hooks.on("renderChatMessage", (message, html, data) => {
         const collapseButton = html[0].querySelector('button[data-action="collapse-details"]');
@@ -41,7 +70,7 @@ if (typeof window !== 'undefined' && typeof Hooks !== 'undefined' && !window.sto
     window.stowTreasureHookRegistered = true;
 }
 
-new Dialog({
+dialogWaitShim({
     title: "Treasure Stowing Options",
     content: "<p>Choose how to fill character inventories:</p>",
     buttons: {
@@ -54,8 +83,8 @@ new Dialog({
             callback: () => stowTreasure(true)
         }
     },
-    default: "lastStep"
-}).render(true);
+    defaultButton: "lastStep"
+});
 
 async function stowTreasure(fillToAbsoluteMax) {
     const getCapacityLimit = (actor) => {
