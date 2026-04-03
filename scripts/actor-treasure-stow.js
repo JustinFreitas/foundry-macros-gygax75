@@ -389,7 +389,7 @@ async function stowTreasure(fillToAbsoluteMax) {
         return reportHtml;
     }).join('');
 
-    const detailsId = `stow-report-${randomID()}`;
+    const detailsId = `stow-report-${(foundry.utils?.randomID ?? randomID)()}`;
     const finalReport = `
         ${summaryHeader}
         <hr>

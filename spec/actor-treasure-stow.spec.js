@@ -40,7 +40,12 @@ describe('actor-treasure-stow.js', () => {
     global.ChatMessage = mockChatMessage;
     global.Hooks = mockHooks;
     global.Dialog = mockDialog;
-    global.randomID = jest.fn(() => "mockID");
+    global.foundry = {
+        utils: {
+            randomID: jest.fn(() => "mockID")
+        }
+    };
+    global.randomID = jest.fn(() => "mockID_legacy");
     global.canvas = {
         tokens: {
             controlled: []
@@ -52,7 +57,7 @@ describe('actor-treasure-stow.js', () => {
     global.ChatMessage = mockChatMessage;
     global.Hooks = mockHooks;
     global.Dialog = mockDialog;
-    global.randomID = jest.fn(() => "mockID");
+
     global.canvas = {
         tokens: {
             controlled: []
@@ -329,6 +334,23 @@ describe('actor-treasure-stow.js', () => {
 
             expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalled();
             expect(mockActor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+        });
+    });
+    
+    describe('randomID compatibility', () => {
+        it('should use foundry.utils.randomID if available', () => {
+            const result = (foundry.utils?.randomID ?? randomID)();
+            expect(result).toBe("mockID");
+        });
+
+        it('should fallback to global randomID if foundry.utils.randomID is missing', () => {
+            const originalRandomID = foundry.utils.randomID;
+            foundry.utils.randomID = undefined;
+            
+            const result = (foundry.utils?.randomID ?? randomID)();
+            expect(result).toBe("mockID_legacy");
+            
+            foundry.utils.randomID = originalRandomID;
         });
     });
 });
