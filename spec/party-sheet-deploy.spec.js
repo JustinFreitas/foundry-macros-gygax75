@@ -85,9 +85,9 @@ describe("Party Sheet Deploy Macro", () => {
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
         // H1 in footprint (500,500)
-        // H2 should be Lane-neighbor BEHIND H1. Facing North (0,-1) means marching South (y=600).
+        // H2 should be Lane-neighbor in Rank 0 (Side-by-side) -> (600,500)
         expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
-        expect(created[1].x).toBe(500); expect(created[1].y).toBe(600);
+        expect(created[1].x).toBe(600); expect(created[1].y).toBe(500);
         expect(deleteMock).toHaveBeenCalled();
     });
 

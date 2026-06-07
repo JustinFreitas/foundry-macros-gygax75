@@ -1,5 +1,5 @@
-// Party Sheet Deploy V16 (Tail-Following Tactical Formation)
-// Ranks 1-4 take the front (Footprint), Ranks 5-9 strictly follow the tail BEHIND them.
+// Party Sheet Deploy V17 (Greedy Snake Formation)
+// Places tokens one-by-one, strictly adjacent to the tail, prioritizing flow over walls.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -55,26 +55,26 @@ async function deploy(dirX, dirY, isSingleFile) {
             const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
             const distF = w * dirX + h * dirY;
             const distS = Math.abs(w * sideX + h * sideY);
-            // Footprint scoring: front row first
-            pt.score = (-distF * 10) + distS;
+            pt.score = (-distF * 10) + distS; // Footprint front-to-back
             footprintCandidates.push(pt);
         }
     }
     footprintCandidates.sort((a, b) => a.score - b.score);
 
-    // 2. Sequential Placement
+    // 2. Sequential "Greedy Snake" Placement
     for (let i = 0; i < partyActors.length; i++) {
         let bestSpot = null;
 
         if (i < footprintCandidates.length) {
-            // Fill footprint first
+            // Priority 1: Fill footprint first
             bestSpot = footprintCandidates[i];
         } else {
-            // Find best adjacent spot to the current TAIL of the group
+            // Priority 2: Find best adjacent spot to the current TAIL
+            // We backtrack ONLY if the immediate tail has 0 available neighbors.
             let parentIdx = i - 1;
             while (parentIdx >= 0 && !bestSpot) {
                 const parent = finalSpots[parentIdx];
-                let neighbors = [
+                const neighbors = [
                     {x:parent.x+gridScale,y:parent.y}, {x:parent.x-gridScale,y:parent.y},
                     {x:parent.x,y:parent.y+gridScale}, {x:parent.x,y:parent.y-gridScale}
                 ].filter(n => !usedKeys.has(`${n.x},${n.y}`));
@@ -93,20 +93,24 @@ async function deploy(dirX, dirY, isSingleFile) {
                         const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
                         const isLegal = !wall && reg;
 
-                        const tailPenalty = (i - 1 - parentIdx) * 50000;
-                        const legalPriority = isLegal ? 0 : 20000;
-                        const lanePriority = (distS <= laneLimit) ? 0 : 10000;
-                        // For ranks BEHIND, we want LOW distB (close to footprint) but > 0
-                        const rankPriority = (distB > 0) ? (distB * 10) : 5000;
+                        // SCORES:
+                        // Discovery Penalty: Prioritize parent closer to the end of the line
+                        const discoveryPenalty = (i - 1 - parentIdx) * 1000000;
+                        // Legality Preference: Prefer spots without walls, but DON'T FILTER
+                        const illegalPenalty = isLegal ? 0 : 500000;
+                        // Lane Preference: Stay in 2-wide (or 1-wide) column
+                        const lanePenalty = (distS <= laneLimit) ? 0 : 100000;
+                        // Tactical Rank: Prefer filling closer ranks
+                        const rankScore = (distB >= -0.1) ? (distB * 10) : (5000 + Math.abs(distB) * 10);
                         
-                        const score = tailPenalty + legalPriority + lanePriority + rankPriority + distS;
+                        const score = discoveryPenalty + illegalPenalty + lanePenalty + rankScore + distS;
                         return { ...n, score };
                     });
 
                     scored.sort((a, b) => a.score - b.score);
                     bestSpot = scored[0];
                 } else {
-                    parentIdx--; 
+                    parentIdx--; // Tail is trapped, try previous member
                 }
             }
         }
