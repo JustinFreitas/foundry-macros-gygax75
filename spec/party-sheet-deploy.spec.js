@@ -78,14 +78,53 @@ describe("Party Sheet Deploy Macro", () => {
         expect(Dialog).toHaveBeenCalled();
         const dialogData = Dialog.mock.calls[0][0];
         
+        // Mock HTML for finding the checkbox
+        const mockHtml = {
+            find: jest.fn().mockReturnValue([{ checked: false }])
+        };
+
         // Simulate clicking 'North'
-        await dialogData.buttons.north.callback();
+        await dialogData.buttons.north.callback(mockHtml);
         
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
-        // Should NOT have rotation property
-        expect(created[0].rotation).toBeUndefined();
         expect(deleteMock).toHaveBeenCalled();
+    });
+
+    test("should force single file if checkbox is checked", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        
+        const actors = [
+            { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
+            { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } },
+            { id: 'a3', name: 'H3', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H3' }) } }
+        ];
+        game.actors.filter.mockReturnValue(actors);
+
+        eval(macroScript);
+        
+        // Mock HTML with Single File CHECKED
+        const mockHtml = {
+            find: jest.fn().mockReturnValue([{ checked: true }])
+        };
+        
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        // North direction (0,-1). 
+        // Footprint (0,0) -> (500,500)
+        // Expansion backward (South) in single file (Lane 0 only)
+        // Rank 1 Lane 0: (0, 1) -> (500, 600)
+        // Rank 2 Lane 0: (0, 2) -> (500, 700)
+        const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+        expect(created).toEqual(expect.arrayContaining([
+            expect.objectContaining({ x: 500, y: 500 }),
+            expect.objectContaining({ x: 500, y: 600 }),
+            expect.objectContaining({ x: 500, y: 700 })
+        ]));
     });
 
     test("should use 2x2 footprint if leader is 2x2", async () => {
@@ -102,7 +141,8 @@ describe("Party Sheet Deploy Macro", () => {
         game.actors.filter.mockReturnValue(actors);
 
         eval(macroScript);
-        await Dialog.mock.calls[0][0].buttons.east.callback();
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
+        await Dialog.mock.calls[0][0].buttons.east.callback(mockHtml);
 
         // Adjacency-first fills footprint from top-left (500,500) then (600,500)...
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];

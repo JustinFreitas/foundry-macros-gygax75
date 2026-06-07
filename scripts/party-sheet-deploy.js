@@ -1,4 +1,4 @@
-// Party Sheet Deploy V10 (Front-Line Formation)
+// Party Sheet Deploy V13 (Tactical Formation with Single-File Toggle)
 // Ranks 1-4 take the front (Footprint), Ranks 5-9 fill in BEHIND them.
 
 const leaderToken = canvas.tokens.controlled[0];
@@ -15,19 +15,25 @@ if (!leaderToken) {
 
         new Dialog({
             title: "Marching Formation",
-            content: "<p style='text-align:center;'>Which direction is the party facing?</p>",
+            content: `
+                <p style='text-align:center;'>Which direction is the party facing?</p>
+                <div class="form-group" style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <label style="flex: 1;">Single File Formation</label>
+                    <input type="checkbox" name="singleFile" style="flex: 0 0 20px;">
+                </div>
+            `,
             buttons: {
-                north: { label: "North", callback: () => deploy(0, -1, 0) },
-                east:  { label: "East",  callback: () => deploy(1, 0, 90) },
-                south: { label: "South", callback: () => deploy(0, 1, 180) },
-                west:  { label: "West",  callback: () => deploy(-1, 0, 270) }
+                north: { label: "North", callback: (html) => deploy(0, -1, html.find('[name="singleFile"]')[0].checked) },
+                east:  { label: "East",  callback: (html) => deploy(1, 0,  html.find('[name="singleFile"]')[0].checked) },
+                south: { label: "South", callback: (html) => deploy(0, 1,  html.find('[name="singleFile"]')[0].checked) },
+                west:  { label: "West",  callback: (html) => deploy(-1, 0, html.find('[name="singleFile"]')[0].checked) }
             },
             default: "north"
         }).render(true);
     }
 }
 
-async function deploy(dirX, dirY, rotation) {
+async function deploy(dirX, dirY, isSingleFile) {
     const leaderToken = canvas.tokens.controlled[0];
     const { x: sX, y: sY, width: lW, height: lH } = leaderToken.document;
     const gridScale = canvas.grid.size;
@@ -88,19 +94,20 @@ async function deploy(dirX, dirY, rotation) {
         const distS = relX * Math.abs(sideX) + relY * Math.abs(sideY);
 
         const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
-        const isLane = distS >= 0 && distS <= 1.1 && distB >= -0.1;
+        
+        // Define Lane Preference based on Single File checkbox
+        const laneWidth = isSingleFile ? 0.1 : 1.1;
+        const isLane = distS >= 0 && distS <= laneWidth && distB >= -0.1;
 
         let priority = 10000;
         if (isFootprint) {
             priority = 0; 
         } else if (isLane) {
-            priority = 1000; // 2-wide column trailing behind
+            priority = 1000; // Preferred column trailing behind
         } else {
             priority = 5000; // Expansion into the rest of the reachable area
         }
 
-        // Score: Priority -> Discovery Order (searchIndex) -> Sideways Lane
-        // Using searchIndex ensures we fill spots in the order they are reachable from the start
         const score = priority + (s.searchIndex * 10) + distS;
         return { ...s, score };
     });
