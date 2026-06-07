@@ -18,6 +18,7 @@ new Dialog({
                 let count = 0;
                 for (const actor of partyMembers) {
                     await actor.setFlag("ose", "party", false);
+                    await actor.setFlag("ose", "-=marchingOrder", null);
                     count++;
                 }
                 ui.notifications.info(`Removed ${count} actors from the party sheet.`);

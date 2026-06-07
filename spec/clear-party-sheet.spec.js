@@ -84,7 +84,9 @@ describe("Clear Party Sheet Macro", () => {
         
         // Check that setFlag was called for party members with correct arguments
         expect(actors[0].setFlag).toHaveBeenCalledWith("ose", "party", false);
+        expect(actors[0].setFlag).toHaveBeenCalledWith("ose", "-=marchingOrder", null);
         expect(actors[1].setFlag).toHaveBeenCalledWith("ose", "party", false);
+        expect(actors[1].setFlag).toHaveBeenCalledWith("ose", "-=marchingOrder", null);
         
         // Check that setFlag was NOT called for non-party members
         expect(actors[2].setFlag).not.toHaveBeenCalled();
