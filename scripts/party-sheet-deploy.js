@@ -1,5 +1,5 @@
-// Party Sheet Deploy
-// Deploys tokens for all actors in the OSE Party Sheet around the selected token.
+// Party Sheet Deploy V6 (Tactical Scored Formation)
+// Deploys OSE party members in a 2-wide column, rank by rank, following walls.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -10,7 +10,7 @@ if (!leaderToken) {
     let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
 
     if (partyActors.length === 0) {
-        ui.notifications.warn("There are no characters currently in your OSE Party Sheet!");
+        ui.notifications.warn("No characters found in the OSE Party Sheet!");
     } else {
         partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
@@ -19,92 +19,108 @@ if (!leaderToken) {
             title: "Expand Party Formation",
             content: "<p style='text-align:center;'>Which direction are they marching?</p>",
             buttons: {
-                north: { label: "North", callback: () => deploy("y", -1, "x", 0) },
-                east:  { label: "East",  callback: () => deploy("x", 1,  "y", 90) },
-                south: { label: "South", callback: () => deploy("y", 1,  "x", 180) },
-                west:  { label: "West",  callback: () => deploy("x", -1, "y", 270) }
+                north: { label: "North", callback: () => deploy(0, -1, 0) },
+                east:  { label: "East",  callback: () => deploy(1, 0, 90) },
+                south: { label: "South", callback: () => deploy(0, 1, 180) },
+                west:  { label: "West",  callback: () => deploy(-1, 0, 270) }
             },
-            default: "east"
+            default: "north"
         }).render(true);
     }
 }
 
-async function deploy(pAxis, pDir, sAxis, rotation) {
+async function deploy(dirX, dirY, rotation) {
     const leaderToken = canvas.tokens.controlled[0];
-    const { x: startX, y: startY, width: lW, height: lH } = leaderToken.document;
+    const { x: sX, y: sY, width: lW, height: lH } = leaderToken.document;
     const gridScale = canvas.grid.size;
-    const leaderCenter = leaderToken.center;
+    const lCenter = leaderToken.center;
+    const leaderRegions = canvas.regions.placeables.filter(r => r.testPoint(lCenter));
 
     let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
     partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
-    const leaderRegions = canvas.regions.placeables.filter(r => r.testPoint(leaderCenter));
-    const finalSpots = [];
+    // 1. BFS to find all reachable legal spots
+    const spots = [];
     const visited = new Set();
     const queue = [];
-    const fallbacks = [];
 
-    // Phase 1: Force use of the Footprint first (Top-to-Bottom, Left-to-Right)
+    // Initialize with footprint squares
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
-            const spot = { x: w, y: h };
-            finalSpots.push(spot);
-            visited.add(`${w},${h}`);
-            queue.push(spot);
+            const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
+            queue.push(pt);
+            visited.add(`${pt.x},${pt.y}`);
         }
     }
 
-    // Phase 2: BFS Expansion in Lanes
-    let qIdx = 0;
-    while (qIdx < queue.length && finalSpots.length < partyActors.length) {
-        const curr = queue[qIdx++];
-        const currC = { x: startX + (curr.x * gridScale) + (gridScale/2), y: startY + (curr.y * gridScale) + (gridScale/2) };
+    let searchCount = 0;
+    while (queue.length > 0 && searchCount < 500) {
+        const curr = queue.shift();
+        spots.push(curr);
+        searchCount++;
 
-        // Expansion: Side-steps first (to fill width), then Forward
-        const neighbors = (pAxis === 'x') 
-            ? [{x:curr.x, y:curr.y+1}, {x:curr.x, y:curr.y-1}, {x:curr.x+pDir, y:curr.y}]
-            : [{x:curr.x+1, y:curr.y}, {x:curr.x-1, y:curr.y}, {x:curr.x, y:curr.y+pDir}];
+        const neighbors = [
+            { x: curr.x + gridScale, y: curr.y },
+            { x: curr.x - gridScale, y: curr.y },
+            { x: curr.x, y: curr.y + gridScale },
+            { x: curr.x, y: curr.y - gridScale }
+        ];
 
         for (const n of neighbors) {
             const key = `${n.x},${n.y}`;
             if (visited.has(key)) continue;
 
-            const tC = { x: startX + (n.x * gridScale) + (gridScale/2), y: startY + (n.y * gridScale) + (gridScale/2) };
-            
-            // Lane Constraint: Stay within leader's footprint width (min 2 lanes)
-            const sVal = n[sAxis];
-            const maxS = Math.max(1, (sAxis === 'x' ? lW : lH) - 1);
-            if (sVal < 0 || sVal > maxS) { fallbacks.push(n); continue; }
-
-            const wall = CONFIG.Canvas.polygonBackends.move.testCollision(currC, tC, {type: "move", mode: "any"});
-            const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(tC));
+            const nC = { x: n.x + gridScale / 2, y: n.y + gridScale / 2 };
+            // Check wall from CURRENT square to NEIGHBOR square
+            const wall = CONFIG.Canvas.polygonBackends.move.testCollision({x: curr.x + gridScale/2, y: curr.y+gridScale/2}, nC, { type: "move", mode: "any" });
+            const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
 
             if (!wall && reg) {
-                visited.add(key); finalSpots.push(n); queue.push(n);
-                if (finalSpots.length >= partyActors.length) break;
-            } else { fallbacks.push(n); }
+                visited.add(key);
+                queue.push(n);
+            }
         }
     }
 
-    // Phase 3: Emergency Fallback (Ignore walls/lanes if no room left)
-    let fIdx = 0;
-    while (finalSpots.length < partyActors.length && (fallbacks[fIdx] || qIdx < queue.length)) {
-        const curr = fallbacks[fIdx++] || queue[qIdx++];
-        if (visited.has(`${curr.x},${curr.y}`)) continue;
-        visited.add(`${curr.x},${curr.y}`);
-        finalSpots.push(curr);
-        // Add all 4 neighbors to ensure we find a spot somewhere
-        [{x:curr.x+1,y:curr.y},{x:curr.x-1,y:curr.y},{x:curr.x,y:curr.y+1},{x:curr.x,y:curr.y-1}].forEach(n => fallbacks.push(n));
-    }
+    // 2. Score every spot based on the chosen direction and 2-wide preference
+    const sideX = -dirY; // Vector perpendicular to direction
+    const sideY = dirX;
+    // Calculate a center line for the formation lanes based on leader footprint
+    const centerLineX = sX + (gridScale * (lW - 1) / 2);
+    const centerLineY = sY + (gridScale * (lH - 1) / 2);
 
-    // 4. Create tokens with correct sorting and rotation
-    const toCreate = partyActors.slice(0, finalSpots.length).map((actor, i) => {
-        const spot = finalSpots[i];
+    const scoredSpots = spots.map(s => {
+        const relX = s.x - sX;
+        const relY = s.y - sY;
+        
+        // distF: How many ranks "Forward" is this spot?
+        const distF = (relX / gridScale) * dirX + (relY / gridScale) * dirY;
+        
+        // offCenter: How many files "Sideways" is this spot from the leader's center line?
+        const dx = (s.x - centerLineX) / gridScale;
+        const dy = (s.y - centerLineY) / gridScale;
+        const offCenter = Math.abs(dx * sideX + dy * sideY);
+
+        // Priority logic:
+        // 1. Footprint spots (distF <= 0 and within bounds) get base score 0.
+        // 2. Expansion spots get base score 1000.
+        // 3. Within each group, sort by distF (ranks) then offCenter (files).
+        let basePriority = 1000;
+        if (relX >= 0 && relX < lW * gridScale && relY >= 0 && relY < lH * gridScale) basePriority = 0;
+
+        const score = basePriority + (distF * 10) + (offCenter * 0.1);
+        return { ...s, score };
+    });
+
+    // 3. Sort by score and deploy
+    scoredSpots.sort((a, b) => a.score - b.score);
+
+    const toCreate = partyActors.slice(0, scoredSpots.length).map((actor, i) => {
+        const spot = scoredSpots[i];
         const data = actor.prototypeToken.toObject();
-        return { ...data, actorId: actor.id, x: startX + (spot.x * gridScale), y: startY + (spot.y * gridScale), rotation, hidden: false };
+        return { ...data, actorId: actor.id, x: spot.x, y: spot.y, rotation, hidden: false };
     });
 
     await canvas.scene.createEmbeddedDocuments("Token", toCreate);
     leaderToken.document.delete();
-    ui.notifications.info(`Deployed ${toCreate.length} characters facing ${rotation}°.`);
 }
