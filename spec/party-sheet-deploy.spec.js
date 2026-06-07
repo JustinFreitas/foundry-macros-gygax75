@@ -79,15 +79,15 @@ describe("Party Sheet Deploy Macro", () => {
         const dialogData = Dialog.mock.calls[0][0];
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
 
-        // Simulate clicking 'North' (Facing North means growing South)
+        // Simulate clicking 'North' (Facing North means Rank 0 is y=500)
         await dialogData.buttons.north.callback(mockHtml);
         
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
         // H1 in footprint (500,500)
-        // H2 should be neighbor BEHIND H1 (South) -> (500,600)
+        // H2 should fill Rank 0 (Side-by-side) -> (600,500)
         expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
-        expect(created[1].x).toBe(500); expect(created[1].y).toBe(600);
+        expect(created[1].x).toBe(600); expect(created[1].y).toBe(500);
         expect(deleteMock).toHaveBeenCalled();
     });
 
@@ -118,7 +118,7 @@ describe("Party Sheet Deploy Macro", () => {
         ]);
     });
 
-    test("should fill large footprint greedily", async () => {
+    test("should fill large footprint greedily front-to-back", async () => {
         const leader = {
             document: { x: 500, y: 500, width: 2, height: 2, delete: jest.fn() },
             center: { x: 600, y: 600 }
@@ -133,15 +133,13 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
-        // Facing East (+X): Opp=West(-1,0), CW=North(0,-1), CW=East(1,0), CW=South(0,1)
+        // Facing East (+X): Front row is x=600.
         await Dialog.mock.calls[0][0].buttons.east.callback(mockHtml);
 
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
-        // H1: (500,500)
-        // H2: neighbor of H1 in East footprint. Order: [W, N, E, S]. 
-        // W, N are out/used. E (+1,0) is available in footprint -> (600,500)
-        expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
-        expect(created[1].x).toBe(600); expect(created[1].y).toBe(500);
+        // H1 should be front-most footprint square. For East, this is (600,500)
+        expect(created[0].x).toBe(600); expect(created[0].y).toBe(500);
+        expect(created[1].x).toBe(600); expect(created[1].y).toBe(600);
     });
 });
