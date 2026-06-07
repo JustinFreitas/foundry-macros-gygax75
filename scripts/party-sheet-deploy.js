@@ -1,5 +1,6 @@
-// Party Sheet Deploy V17 (Greedy Snake Formation)
-// Places tokens one-by-one, strictly adjacent to the tail, prioritizing flow over walls.
+// Party Sheet Deploy V18 (Cardinal Greedy Snake Formation)
+// Places tokens one-by-one, strictly adjacent, following a cardinal preference [Opposite, CW, CW, CW].
+// Prefers legal spots (backtracking allowed), but breaks walls from the tail if no legal spots exist.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -45,72 +46,79 @@ async function deploy(dirX, dirY, isSingleFile) {
 
     const finalSpots = [];
     const usedKeys = new Set();
-    const sideX = -dirY; const sideY = dirX;
-    const laneLimit = isSingleFile ? 0.1 : 1.1;
+    
+    // Define the Cardinal Search Sequence: [Opposite, CW, CW, CW]
+    const oppX = -dirX; const oppY = -dirY;
+    const searchSequence = [
+        { x: oppX, y: oppY },          // 1. Opposite of Facing
+        { x: -oppY, y: oppX },         // 2. CW from 1
+        { x: -oppX, y: -oppY },        // 3. CW from 2
+        { x: oppY, y: -oppX }          // 4. CW from 3
+    ];
 
-    // 1. Initial candidates: all squares in the footprint
-    const footprintCandidates = [];
-    for (let w = 0; w < lW; w++) {
-        for (let h = 0; h < lH; h++) {
-            const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
-            const distF = w * dirX + h * dirY;
-            const distS = Math.abs(w * sideX + h * sideY);
-            pt.score = (-distF * 10) + distS; // Footprint front-to-back
-            footprintCandidates.push(pt);
-        }
-    }
-    footprintCandidates.sort((a, b) => a.score - b.score);
+    // PASS 1: Initialize Footprint
+    // We fill the footprint squares first using the greedy logic from the start point
+    let tail = { x: sX, y: sY };
+    usedKeys.add(`${tail.x},${tail.y}`);
+    finalSpots.push(tail);
 
-    // 2. Sequential "Greedy Snake" Placement
-    for (let i = 0; i < partyActors.length; i++) {
+    for (let i = 1; i < partyActors.length; i++) {
         let bestSpot = null;
 
-        if (i < footprintCandidates.length) {
-            // Priority 1: Fill footprint first
-            bestSpot = footprintCandidates[i];
-        } else {
-            // Priority 2: Find best adjacent spot to the current TAIL
-            // We backtrack ONLY if the immediate tail has 0 available neighbors.
-            let parentIdx = i - 1;
-            while (parentIdx >= 0 && !bestSpot) {
-                const parent = finalSpots[parentIdx];
-                const neighbors = [
-                    {x:parent.x+gridScale,y:parent.y}, {x:parent.x-gridScale,y:parent.y},
-                    {x:parent.x,y:parent.y+gridScale}, {x:parent.x,y:parent.y-gridScale}
-                ].filter(n => !usedKeys.has(`${n.x},${n.y}`));
+        // --- STEP A: TACTICAL LEGAL SEARCH (Backtracking Allowed) ---
+        // Search through ALL placed spots (starting from tail) to find a legal adjacent square
+        for (let j = finalSpots.length - 1; j >= 0 && !bestSpot; j--) {
+            const parent = finalSpots[j];
+            for (const dir of searchSequence) {
+                const nx = parent.x + dir.x * gridScale;
+                const ny = parent.y + dir.y * gridScale;
+                const key = `${nx},${ny}`;
+                if (usedKeys.has(key)) continue;
 
-                if (neighbors.length > 0) {
-                    const scored = neighbors.map(n => {
-                        const relX = (n.x - sX) / gridScale;
-                        const relY = (n.y - sY) / gridScale;
-                        // distB: Distance BEHIND the facing direction (e.g., South if facing North)
-                        const distB = -(relX * dirX + relY * dirY);
-                        const distS = Math.abs(relX * sideX + relY * sideY);
+                // Check if neighbor is within Footprint
+                const isFootprint = nx >= sX && nx < sX + lW * gridScale && ny >= sY && ny < sY + lH * gridScale;
+                
+                // If it's a 2x2 footprint, we MUST fill it before expanding
+                if (finalSpots.length < (lW * lH) && !isFootprint) continue;
 
-                        const nC = { x: n.x + gridScale/2, y: n.y + gridScale / 2 };
-                        const pC = { x: parent.x + gridScale/2, y: parent.y + gridScale / 2 };
-                        const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
-                        const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
-                        const isLegal = !wall && reg;
+                const nC = { x: nx + gridScale/2, y: ny + gridScale/2 };
+                const pC = { x: parent.x + gridScale/2, y: parent.y + gridScale / 2 };
+                const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
+                const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
+                
+                if (!wall && reg) {
+                    bestSpot = { x: nx, y: ny };
+                    break;
+                }
+            }
+        }
 
-                        // SCORES:
-                        // Discovery Penalty: Prioritize parent closer to the end of the line
-                        const discoveryPenalty = (i - 1 - parentIdx) * 1000000;
-                        // Legality Preference: Prefer spots without walls, but DON'T FILTER
-                        const illegalPenalty = isLegal ? 0 : 500000;
-                        // Lane Preference: Stay in 2-wide (or 1-wide) column
-                        const lanePenalty = (distS <= laneLimit) ? 0 : 100000;
-                        // Tactical Rank: Prefer filling closer ranks
-                        const rankScore = (distB >= -0.1) ? (distB * 10) : (5000 + Math.abs(distB) * 10);
-                        
-                        const score = discoveryPenalty + illegalPenalty + lanePenalty + rankScore + distS;
-                        return { ...n, score };
-                    });
+        // --- STEP B: GREEDY ILLEGAL FALLBACK (Disregard walls to keep line contiguous) ---
+        // If NO legal spot exists adjacent to ANY token, we force a move from the absolute TAIL
+        if (!bestSpot) {
+            const currentTail = finalSpots[finalSpots.length - 1];
+            for (const dir of searchSequence) {
+                const nx = currentTail.x + dir.x * gridScale;
+                const ny = currentTail.y + dir.y * gridScale;
+                const key = `${nx},${ny}`;
+                if (usedKeys.has(key)) continue;
+                
+                bestSpot = { x: nx, y: ny };
+                break;
+            }
+        }
 
-                    scored.sort((a, b) => a.score - b.score);
-                    bestSpot = scored[0];
-                } else {
-                    parentIdx--; // Tail is trapped, try previous member
+        // --- STEP C: EMERGENCY BACKTRACK (Tail is trapped, find first open neighbor anywhere) ---
+        if (!bestSpot) {
+            for (let j = finalSpots.length - 1; j >= 0 && !bestSpot; j--) {
+                const parent = finalSpots[j];
+                for (const dir of searchSequence) {
+                    const nx = parent.x + dir.x * gridScale;
+                    const ny = parent.y + dir.y * gridScale;
+                    if (!usedKeys.has(`${nx},${ny}`)) {
+                        bestSpot = { x: nx, y: ny };
+                        break;
+                    }
                 }
             }
         }
@@ -118,6 +126,8 @@ async function deploy(dirX, dirY, isSingleFile) {
         if (bestSpot) {
             finalSpots.push(bestSpot);
             usedKeys.add(`${bestSpot.x},${bestSpot.y}`);
+        } else {
+            break; // Absolutely no squares available
         }
     }
 
