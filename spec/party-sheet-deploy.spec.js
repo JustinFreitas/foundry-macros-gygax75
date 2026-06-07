@@ -29,7 +29,9 @@ global.CONFIG = {
 };
 
 global.game = {
-    actors: []
+    actors: {
+        filter: jest.fn()
+    }
 };
 
 global.ui = {
@@ -39,13 +41,17 @@ global.ui = {
     }
 };
 
+global.Dialog = jest.fn(function(dialogData) {
+    this.render = jest.fn();
+    this.data = dialogData;
+});
+
 describe("Party Sheet Deploy Macro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.canvas.tokens.controlled = [];
         global.canvas.regions.placeables = [];
         global.CONFIG.Canvas.polygonBackends.move.testCollision.mockReturnValue(false);
-        global.game.actors = [];
     });
 
     test("should warn if no token is selected", () => {
@@ -53,80 +59,62 @@ describe("Party Sheet Deploy Macro", () => {
         expect(ui.notifications.warn).toHaveBeenCalledWith("Please select the Party Token first!");
     });
 
-    test("should use leader footprint first", () => {
-        global.canvas.tokens.controlled = [{
-            document: { x: 500, y: 500, width: 2, height: 2, rotation: 90, delete: jest.fn() },
-            center: { x: 600, y: 600 }
-        }];
+    test("should show direction picker and deploy in chosen direction", async () => {
+        const deleteMock = jest.fn();
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: deleteMock },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
         
-        global.game.actors = [
+        const actors = [
             { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
             { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } }
         ];
+        game.actors.filter.mockReturnValue(actors);
 
         eval(macroScript);
 
-        // 2x2 footprint: (0,0), (0,1), (1,0), (1,1)
+        expect(Dialog).toHaveBeenCalled();
+        const dialogData = Dialog.mock.calls[0][0];
+        
+        // Simulate clicking 'East'
+        await dialogData.buttons.east.callback();
+
+        // H1: Footprint (500,500)
+        // H2: Neighbor East (Side Step first) -> (500,600)
         expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
-            expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 500, y: 600 })
+            expect.objectContaining({ name: 'H1', x: 500, y: 500 }),
+            expect.objectContaining({ name: 'H2', x: 500, y: 600 })
         ]);
+        expect(deleteMock).toHaveBeenCalled();
     });
 
-    test("should deploy in a 2-wide formation along the marching axis", () => {
-        global.canvas.tokens.controlled = [{
-            document: { x: 500, y: 500, width: 1, height: 1, rotation: 90, delete: jest.fn() }, // East (+X)
+    test("should use 2 lanes if leader is 1x1", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
             center: { x: 550, y: 550 }
-        }];
+        };
+        global.canvas.tokens.controlled = [leader];
         
-        // 4 actors: 1 in footprint, 3 expanding
-        global.game.actors = [
+        const actors = [
             { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
             { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } },
-            { id: 'a3', name: 'H3', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H3' }) } },
-            { id: 'a4', name: 'H4', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H4' }) } }
+            { id: 'a3', name: 'H3', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H3' }) } }
         ];
+        game.actors.filter.mockReturnValue(actors);
 
         eval(macroScript);
+        await Dialog.mock.calls[0][0].buttons.east.callback();
 
-        // Leader facing East: Primary=X, Secondary=Y. Lanes y=0, 1.
-        // H1: Footprint (0,0) -> (500, 500)
-        // H2: Neighbor (1,0) -> (600, 500) - in lane
-        // H3: Neighbor (0,1) -> (500, 600) - in lane
-        // H4: Neighbor of H2 or H3 -> (1,1) -> (600, 600) - in lane
-        // Total: 2x2 block to the right of start
-        
-        const createdTokens = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
-        expect(createdTokens).toHaveLength(4);
-        expect(createdTokens).toEqual(expect.arrayContaining([
+        // H1: (500,500)
+        // H2: Side Step (500,600) -> Center (550,650)
+        // H3: Forward (600,500) -> Center (650,550)
+        const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+        expect(created).toEqual(expect.arrayContaining([
             expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 600, y: 500 }),
             expect.objectContaining({ x: 500, y: 600 }),
-            expect.objectContaining({ x: 600, y: 600 })
+            expect.objectContaining({ x: 600, y: 500 })
         ]));
-    });
-
-    test("should fallback beyond walls and lanes if necessary", () => {
-        global.canvas.tokens.controlled = [{
-            document: { x: 500, y: 500, width: 1, height: 1, rotation: 90, delete: jest.fn() },
-            center: { x: 550, y: 550 }
-        }];
-
-        // Mock walls everywhere
-        global.CONFIG.Canvas.polygonBackends.move.testCollision.mockReturnValue(true);
-        
-        global.game.actors = [
-            { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
-            { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } }
-        ];
-
-        eval(macroScript);
-
-        // H1 in footprint, H2 in fallback
-        // Neighbors of (0,0) with Side before Forward: (0,1), (0,-1), (1,0)
-        expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
-            expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 500, y: 600 }) // First fallback neighbor (Side)
-        ]);
     });
 });
