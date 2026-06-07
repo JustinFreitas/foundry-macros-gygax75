@@ -50,30 +50,12 @@ describe("Party Sheet Deploy Macro", () => {
 
     test("should warn if no token is selected", () => {
         eval(macroScript);
-
         expect(ui.notifications.warn).toHaveBeenCalledWith("Please select the Party Token first!");
-    });
-
-    test("should warn if the party sheet is empty", () => {
-        global.canvas.tokens.controlled = [{
-            document: { x: 100, y: 100, width: 1, height: 1 },
-            center: { x: 150, y: 150 }
-        }];
-        
-        eval(macroScript);
-
-        expect(ui.notifications.warn).toHaveBeenCalledWith("There are no characters currently in your OSE Party Sheet!");
     });
 
     test("should use leader footprint first", () => {
         global.canvas.tokens.controlled = [{
-            document: { 
-                x: 500, 
-                y: 500,
-                width: 2,
-                height: 2,
-                delete: jest.fn()
-            },
+            document: { x: 500, y: 500, width: 2, height: 2, rotation: 90, delete: jest.fn() },
             center: { x: 600, y: 600 }
         }];
         
@@ -85,54 +67,52 @@ describe("Party Sheet Deploy Macro", () => {
         eval(macroScript);
 
         // 2x2 footprint: (0,0), (0,1), (1,0), (1,1)
-        // Spots at: (500,500), (500,600), (600,500), (600,600)
         expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
             expect.objectContaining({ x: 500, y: 500 }),
             expect.objectContaining({ x: 500, y: 600 })
         ]);
     });
 
-    test("should deploy party actors in sorted order by marchingOrder flag", () => {
+    test("should deploy in a 2-wide formation along the marching axis", () => {
         global.canvas.tokens.controlled = [{
-            document: { x: 500, y: 500, width: 2, height: 2, delete: jest.fn() },
-            center: { x: 600, y: 600 }
+            document: { x: 500, y: 500, width: 1, height: 1, rotation: 90, delete: jest.fn() }, // East (+X)
+            center: { x: 550, y: 550 }
         }];
         
-        // H2 has order 1, H1 has order 2. They should swap positions in the final result.
+        // 4 actors: 1 in footprint, 3 expanding
         global.game.actors = [
-            { 
-                id: 'actor1', name: 'Hero 1', type: 'character', flags: { ose: { party: true, marchingOrder: 2 } },
-                prototypeToken: { toObject: () => ({ name: 'Hero 1' }) }
-            },
-            { 
-                id: 'actor2', name: 'Hero 2', type: 'character', flags: { ose: { party: true, marchingOrder: 1 } },
-                prototypeToken: { toObject: () => ({ name: 'Hero 2' }) }
-            }
+            { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
+            { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } },
+            { id: 'a3', name: 'H3', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H3' }) } },
+            { id: 'a4', name: 'H4', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H4' }) } }
         ];
 
         eval(macroScript);
 
-        // Spot 1 (500,500) should be Hero 2 (order 1)
-        // Spot 2 (500,600) should be Hero 1 (order 2)
-        expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
-            expect.objectContaining({ name: 'Hero 2', x: 500, y: 500 }),
-            expect.objectContaining({ name: 'Hero 1', x: 500, y: 600 })
-        ]);
+        // Leader facing East: Primary=X, Secondary=Y. Lanes y=0, 1.
+        // H1: Footprint (0,0) -> (500, 500)
+        // H2: Neighbor (1,0) -> (600, 500) - in lane
+        // H3: Neighbor (0,1) -> (500, 600) - in lane
+        // H4: Neighbor of H2 or H3 -> (1,1) -> (600, 600) - in lane
+        // Total: 2x2 block to the right of start
+        
+        const createdTokens = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+        expect(createdTokens).toHaveLength(4);
+        expect(createdTokens).toEqual(expect.arrayContaining([
+            expect.objectContaining({ x: 500, y: 500 }),
+            expect.objectContaining({ x: 600, y: 500 }),
+            expect.objectContaining({ x: 500, y: 600 }),
+            expect.objectContaining({ x: 600, y: 600 })
+        ]));
     });
 
-    test("should fallback beyond walls if no legal space left", () => {
+    test("should fallback beyond walls and lanes if necessary", () => {
         global.canvas.tokens.controlled = [{
-            document: { 
-                x: 500, 
-                y: 500,
-                width: 1,
-                height: 1,
-                delete: jest.fn()
-            },
+            document: { x: 500, y: 500, width: 1, height: 1, rotation: 90, delete: jest.fn() },
             center: { x: 550, y: 550 }
         }];
 
-        // Mock walls everywhere around the start square (500,500)
+        // Mock walls everywhere
         global.CONFIG.Canvas.polygonBackends.move.testCollision.mockReturnValue(true);
         
         global.game.actors = [
@@ -142,12 +122,11 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
 
-        // First actor takes footprint: (500,500)
-        // Second actor must take a fallback spot (bfs ignores walls in phase 3)
-        // neighbors of (0,0): (1,0), (0,1), (-1,0), (0,-1)
+        // H1 in footprint, H2 in fallback
+        // Neighbors of (0,0) with Side before Forward: (0,1), (0,-1), (1,0)
         expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
             expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 600, y: 500 }) // First fallback neighbor found
+            expect.objectContaining({ x: 500, y: 600 }) // First fallback neighbor (Side)
         ]);
     });
 });

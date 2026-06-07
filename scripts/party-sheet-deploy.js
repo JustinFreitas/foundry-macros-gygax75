@@ -26,6 +26,20 @@ if (!leaderToken) {
         const leaderHeight = leaderToken.document.height;
         const gridScale = canvas.grid.size;
         const leaderCenter = leaderToken.center;
+        const rotation = leaderToken.document.rotation || 0;
+
+        // Determine marching direction based on rotation (0=N, 90=E, 180=S, 270=W)
+        const normRot = ((rotation % 360) + 360) % 360;
+        let primaryAxis, primaryDir, secondaryAxis;
+        if (normRot >= 45 && normRot < 135) { // East
+            primaryAxis = 'x'; primaryDir = 1; secondaryAxis = 'y';
+        } else if (normRot >= 135 && normRot < 225) { // South
+            primaryAxis = 'y'; primaryDir = 1; secondaryAxis = 'x';
+        } else if (normRot >= 225 && normRot < 315) { // West
+            primaryAxis = 'x'; primaryDir = -1; secondaryAxis = 'y';
+        } else { // North
+            primaryAxis = 'y'; primaryDir = -1; secondaryAxis = 'x';
+        }
 
         // Get regions at leader's position (using center for better accuracy)
         const leaderRegions = canvas.regions.placeables.filter(r => r.testPoint(leaderCenter));
@@ -47,8 +61,8 @@ if (!leaderToken) {
             }
         }
 
-        // Phase 2: BFS for "Legal" spots (No walls, same region)
-        let spotIndex = 0; // Index in legalQueue for expansion
+        // Phase 2: BFS for "Legal" spots (No walls, same region, 2-wide lane)
+        let spotIndex = 0; 
         while (spotIndex < legalQueue.length && finalSpots.length < partyActors.length) {
             const current = legalQueue[spotIndex++];
             const currentCenter = { 
@@ -56,12 +70,19 @@ if (!leaderToken) {
                 y: startY + (current.y * gridScale) + (gridScale / 2) 
             };
             
-            const neighbors = [
-                {x: current.x + 1, y: current.y},
-                {x: current.x, y: current.y + 1},
-                {x: current.x - 1, y: current.y},
-                {x: current.x, y: current.y - 1}
-            ];
+            // Prioritize neighbors based on marching direction
+            // We want to fill the "Width" before the "Depth" to stay compact (2-wide)
+            // In Phase 2, we disallow backward expansion to ensure a clean column
+            const neighbors = [];
+            if (primaryAxis === 'x') {
+                neighbors.push({x: current.x, y: current.y + 1}); // Side
+                neighbors.push({x: current.x, y: current.y - 1}); // Side
+                neighbors.push({x: current.x + primaryDir, y: current.y}); // Forward
+            } else {
+                neighbors.push({x: current.x + 1, y: current.y}); // Side
+                neighbors.push({x: current.x - 1, y: current.y}); // Side
+                neighbors.push({x: current.x, y: current.y + primaryDir}); // Forward
+            }
 
             for (const neighbor of neighbors) {
                 const key = `${neighbor.x},${neighbor.y}`;
@@ -71,7 +92,14 @@ if (!leaderToken) {
                 const targetY = startY + (neighbor.y * gridScale);
                 const targetCenter = { x: targetX + (gridScale / 2), y: targetY + (gridScale / 2) };
 
-                // Check for walls and regions
+                // 1. Lane Check (2-wide max for Phase 2)
+                const s = neighbor[secondaryAxis];
+                if (s < 0 || s > 1) {
+                    potentialFallbacks.add(key);
+                    continue;
+                }
+
+                // 2. Wall Collision Check
                 const hasCollision = CONFIG.Canvas.polygonBackends.move.testCollision(
                     currentCenter, 
                     targetCenter, 
@@ -94,8 +122,7 @@ if (!leaderToken) {
             }
         }
 
-        // Phase 3: Fallback BFS (If still need spots, ignore walls/regions)
-        // Add potential fallbacks to a new queue for expansion
+        // Phase 3: Fallback BFS (If still need spots, ignore walls/regions/lanes)
         for (const key of potentialFallbacks) {
             if (!visited.has(key)) {
                 const [x, y] = key.split(',').map(Number);
@@ -114,18 +141,10 @@ if (!leaderToken) {
 
             if (finalSpots.length >= partyActors.length) break;
 
-            // Add neighbors of this illegal spot to continue expanding
-            const neighbors = [
-                {x: current.x + 1, y: current.y},
-                {x: current.x, y: current.y + 1},
-                {x: current.x - 1, y: current.y},
-                {x: current.x, y: current.y - 1}
-            ];
+            const neighbors = [{x: current.x + 1, y: current.y}, {x: current.x, y: current.y + 1}, {x: current.x - 1, y: current.y}, {x: current.x, y: current.y - 1}];
             for (const n of neighbors) {
                 const nKey = `${n.x},${n.y}`;
-                if (!visited.has(nKey)) {
-                    fallbackQueue.push(n);
-                }
+                if (!visited.has(nKey)) fallbackQueue.push(n);
             }
         }
 
