@@ -104,11 +104,11 @@ describe("Party Sheet Deploy Macro", () => {
         eval(macroScript);
         await Dialog.mock.calls[0][0].buttons.east.callback();
 
-        // For East (+X), front of footprint is (600, 500) and (600, 600)
+        // Adjacency-first fills footprint from top-left (500,500) then (600,500)...
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toEqual(expect.arrayContaining([
-            expect.objectContaining({ x: 600, y: 500 }),
-            expect.objectContaining({ x: 600, y: 600 })
+            expect.objectContaining({ x: 500, y: 500 }),
+            expect.objectContaining({ x: 600, y: 500 })
         ]));
     });
 });

@@ -37,14 +37,15 @@ async function deploy(dirX, dirY, rotation) {
     let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
     partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
-    // 1. Map reachable legal spots
+    // 1. BFS to find all reachable legal spots and record discovery order
     const spots = [];
     const visited = new Set();
     const queue = [];
 
+    // Initialize with footprint squares
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
-            const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
+            const pt = { x: sX + w * gridScale, y: sY + h * gridScale, searchIndex: 0 };
             queue.push(pt);
             visited.add(`${pt.x},${pt.y}`);
         }
@@ -55,18 +56,28 @@ async function deploy(dirX, dirY, rotation) {
         const curr = queue.shift();
         spots.push(curr);
         searchCount++;
-        const neighbors = [{x:curr.x+gridScale,y:curr.y},{x:curr.x-gridScale,y:curr.y},{x:curr.x,y:curr.y+gridScale},{x:curr.x,y:curr.y-gridScale}];
+
+        const neighbors = [
+            { x: curr.x + gridScale, y: curr.y }, { x: curr.x - gridScale, y: curr.y },
+            { x: curr.x, y: curr.y + gridScale }, { x: curr.x, y: curr.y - gridScale }
+        ];
+
         for (const n of neighbors) {
             const key = `${n.x},${n.y}`;
             if (visited.has(key)) continue;
+
             const nC = { x: n.x + gridScale / 2, y: n.y + gridScale / 2 };
             const wall = CONFIG.Canvas.polygonBackends.move.testCollision({x: curr.x + gridScale/2, y: curr.y+gridScale/2}, nC, { type: "move", mode: "any" });
             const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
-            if (!wall && reg) { visited.add(key); queue.push(n); }
+
+            if (!wall && reg) {
+                visited.add(key);
+                queue.push({ ...n, searchIndex: searchCount });
+            }
         }
     }
 
-    // 2. Score spots (Priority: Footprint -> Backward -> Sides -> Forward)
+    // 2. Score spots (Priority: Footprint -> Adjacency-First Lanes -> Adjacency-First Expansion)
     const sideX = -dirY; const sideY = dirX;
     const scoredSpots = spots.map(s => {
         const relX = (s.x - sX) / gridScale;
@@ -76,28 +87,21 @@ async function deploy(dirX, dirY, rotation) {
         const distB = -distF; 
         const distS = relX * Math.abs(sideX) + relY * Math.abs(sideY);
 
-        const r = Math.floor(distB + 0.5); // Discrete Rank (0, 1, 2...)
-        const s_lane = Math.floor(distS + 0.5); // Discrete Lane (0, 1, 2...)
-
         const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
+        const isLane = distS >= 0 && distS <= 1.1 && distB >= -0.1;
 
         let priority = 10000;
         if (isFootprint) {
             priority = 0; 
-        } else if (r >= 0 && s_lane >= 0 && s_lane <= 1) {
-            // Preferred 2-wide formation trailing BEHIND the front line
-            priority = 1000; 
-        } else if (r >= 0) {
-            // Wider expansion trailing behind
-            priority = 5000; 
+        } else if (isLane) {
+            priority = 1000; // 2-wide column trailing behind
         } else {
-            // Spots ahead of the front line
-            priority = 8000;
+            priority = 5000; // Expansion into the rest of the reachable area
         }
 
-        // Score: Priority -> Rank (distB) -> Lane (distS)
-        // This ensures Row 0 Lane 0, Row 0 Lane 1, Row 1 Lane 0, Row 1 Lane 1...
-        const score = priority + (r * 10) + distS;
+        // Score: Priority -> Discovery Order (searchIndex) -> Sideways Lane
+        // Using searchIndex ensures we fill spots in the order they are reachable from the start
+        const score = priority + (s.searchIndex * 10) + distS;
         return { ...s, score };
     });
 
