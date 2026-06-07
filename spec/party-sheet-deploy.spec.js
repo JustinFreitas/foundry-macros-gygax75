@@ -92,6 +92,34 @@ describe("Party Sheet Deploy Macro", () => {
         ]);
     });
 
+    test("should deploy party actors in sorted order by marchingOrder flag", () => {
+        global.canvas.tokens.controlled = [{
+            document: { x: 500, y: 500, width: 2, height: 2, delete: jest.fn() },
+            center: { x: 600, y: 600 }
+        }];
+        
+        // H2 has order 1, H1 has order 2. They should swap positions in the final result.
+        global.game.actors = [
+            { 
+                id: 'actor1', name: 'Hero 1', type: 'character', flags: { ose: { party: true, marchingOrder: 2 } },
+                prototypeToken: { toObject: () => ({ name: 'Hero 1' }) }
+            },
+            { 
+                id: 'actor2', name: 'Hero 2', type: 'character', flags: { ose: { party: true, marchingOrder: 1 } },
+                prototypeToken: { toObject: () => ({ name: 'Hero 2' }) }
+            }
+        ];
+
+        eval(macroScript);
+
+        // Spot 1 (500,500) should be Hero 2 (order 1)
+        // Spot 2 (500,600) should be Hero 1 (order 2)
+        expect(canvas.scene.createEmbeddedDocuments).toHaveBeenCalledWith("Token", [
+            expect.objectContaining({ name: 'Hero 2', x: 500, y: 500 }),
+            expect.objectContaining({ name: 'Hero 1', x: 500, y: 600 })
+        ]);
+    });
+
     test("should fallback beyond walls if no legal space left", () => {
         global.canvas.tokens.controlled = [{
             document: { 

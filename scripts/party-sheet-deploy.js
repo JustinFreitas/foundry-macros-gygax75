@@ -7,11 +7,18 @@ if (!leaderToken) {
     ui.notifications.warn("Please select the Party Token first!");
 } else {
     // 1. Pull the actual list of actors currently marked as being in the OSE Party
-    const partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
+    let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
 
     if (partyActors.length === 0) {
         ui.notifications.warn("There are no characters currently in your OSE Party Sheet!");
     } else {
+        // Sort actors by marching order flag
+        partyActors.sort((a, b) => {
+            const orderA = a.flags.ose?.marchingOrder ?? 999;
+            const orderB = b.flags.ose?.marchingOrder ?? 999;
+            return orderA - orderB;
+        });
+
         // 2. Define starting coordinates and identify leader's regions
         const startX = leaderToken.document.x;
         const startY = leaderToken.document.y;
