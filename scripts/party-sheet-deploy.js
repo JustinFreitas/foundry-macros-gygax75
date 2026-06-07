@@ -1,5 +1,5 @@
-// Party Sheet Deploy V15 (Incremental Tactical Formation)
-// Ranks 1-4 take the front (Footprint), Ranks 5-9 fill sequentially and contiguously.
+// Party Sheet Deploy V16 (Tail-Following Tactical Formation)
+// Ranks 1-4 take the front (Footprint), Ranks 5-9 strictly follow the tail BEHIND them.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -55,7 +55,8 @@ async function deploy(dirX, dirY, isSingleFile) {
             const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
             const distF = w * dirX + h * dirY;
             const distS = Math.abs(w * sideX + h * sideY);
-            pt.score = (-distF * 10) + distS; // Footprint front-to-back
+            // Footprint scoring: front row first
+            pt.score = (-distF * 10) + distS;
             footprintCandidates.push(pt);
         }
     }
@@ -69,46 +70,44 @@ async function deploy(dirX, dirY, isSingleFile) {
             // Fill footprint first
             bestSpot = footprintCandidates[i];
         } else {
-            // Find best adjacent spot to ANY already placed token
-            const lastSpot = finalSpots[finalSpots.length - 1];
-            const frontier = [];
-            
-            // Collect all available neighbors of all placed tokens
-            for (const p of finalSpots) {
-                const neighbors = [{x:p.x+gridScale,y:p.y},{x:p.x-gridScale,y:p.y},{x:p.x,y:p.y+gridScale},{x:p.x,y:p.y-gridScale}];
-                for (const n of neighbors) {
-                    const key = `${n.x},${n.y}`;
-                    if (usedKeys.has(key)) continue;
-                    
-                    const relX = (n.x - sX) / gridScale;
-                    const relY = (n.y - sY) / gridScale;
-                    const distF = relX * dirX + relY * dirY;
-                    const distB = -distF;
-                    const distS = Math.abs(relX * sideX + relY * sideY);
+            // Find best adjacent spot to the current TAIL of the group
+            let parentIdx = i - 1;
+            while (parentIdx >= 0 && !bestSpot) {
+                const parent = finalSpots[parentIdx];
+                let neighbors = [
+                    {x:parent.x+gridScale,y:parent.y}, {x:parent.x-gridScale,y:parent.y},
+                    {x:parent.x,y:parent.y+gridScale}, {x:parent.x,y:parent.y-gridScale}
+                ].filter(n => !usedKeys.has(`${n.x},${n.y}`));
 
-                    // Skip if ahead of the front rank during tactical phase
-                    if (distB < -0.1) continue;
+                if (neighbors.length > 0) {
+                    const scored = neighbors.map(n => {
+                        const relX = (n.x - sX) / gridScale;
+                        const relY = (n.y - sY) / gridScale;
+                        // distB: Distance BEHIND the facing direction (e.g., South if facing North)
+                        const distB = -(relX * dirX + relY * dirY);
+                        const distS = Math.abs(relX * sideX + relY * sideY);
 
-                    // Adjacency check (walls/regions) from parent 'p'
-                    const nC = { x: n.x + gridScale/2, y: n.y + gridScale/2 };
-                    const pC = { x: p.x + gridScale/2, y: p.y + gridScale/2 };
-                    const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
-                    const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
-                    const isLegal = !wall && reg;
+                        const nC = { x: n.x + gridScale/2, y: n.y + gridScale / 2 };
+                        const pC = { x: parent.x + gridScale/2, y: parent.y + gridScale / 2 };
+                        const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
+                        const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
+                        const isLegal = !wall && reg;
 
-                    // Score: Legal vs Illegal, Lane vs Expansion, Rank, Proximity to tail
-                    const lanePriority = (distS <= laneLimit) ? 0 : 5000;
-                    const legalPriority = isLegal ? 0 : 10000;
-                    const tailProximity = Math.abs(n.x - lastSpot.x) + Math.abs(n.y - lastSpot.y);
-                    
-                    const score = legalPriority + lanePriority + (distB * 10) + distS + (tailProximity / gridScale);
-                    frontier.push({ ...n, score });
+                        const tailPenalty = (i - 1 - parentIdx) * 50000;
+                        const legalPriority = isLegal ? 0 : 20000;
+                        const lanePriority = (distS <= laneLimit) ? 0 : 10000;
+                        // For ranks BEHIND, we want LOW distB (close to footprint) but > 0
+                        const rankPriority = (distB > 0) ? (distB * 10) : 5000;
+                        
+                        const score = tailPenalty + legalPriority + lanePriority + rankPriority + distS;
+                        return { ...n, score };
+                    });
+
+                    scored.sort((a, b) => a.score - b.score);
+                    bestSpot = scored[0];
+                } else {
+                    parentIdx--; 
                 }
-            }
-
-            if (frontier.length > 0) {
-                frontier.sort((a, b) => a.score - b.score);
-                bestSpot = frontier[0];
             }
         }
 

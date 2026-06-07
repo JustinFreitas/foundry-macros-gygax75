@@ -85,10 +85,9 @@ describe("Party Sheet Deploy Macro", () => {
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
         // H1 in footprint (500,500)
-        // H2 should be Lane-neighbor of H1. For 2-wide, it could be side (600,500) or behind (500,600).
-        // My scoring prefers Side first within rank 0.
+        // H2 should be Lane-neighbor BEHIND H1. Facing North (0,-1) means marching South (y=600).
         expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
-        expect(created[1].x).toBe(600); expect(created[1].y).toBe(500);
+        expect(created[1].x).toBe(500); expect(created[1].y).toBe(600);
         expect(deleteMock).toHaveBeenCalled();
     });
 
