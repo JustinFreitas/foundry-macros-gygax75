@@ -1,5 +1,5 @@
-// Party Sheet Deploy V8 (Lane-Based Tactical Formation)
-// Deploys OSE party members in a 2-wide column, rank by rank, strictly forward.
+// Party Sheet Deploy V10 (Front-Line Formation)
+// Ranks 1-4 take the front (Footprint), Ranks 5-9 fill in BEHIND them.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -14,8 +14,8 @@ if (!leaderToken) {
         partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
         new Dialog({
-            title: "Expand Party Formation",
-            content: "<p style='text-align:center;'>Which direction are they marching?</p>",
+            title: "Marching Formation",
+            content: "<p style='text-align:center;'>Which direction is the party facing?</p>",
             buttons: {
                 north: { label: "North", callback: () => deploy(0, -1, 0) },
                 east:  { label: "East",  callback: () => deploy(1, 0, 90) },
@@ -37,12 +37,11 @@ async function deploy(dirX, dirY, rotation) {
     let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
     partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
-    // 1. Map all reachable squares in the room
+    // 1. Map reachable legal spots
     const spots = [];
     const visited = new Set();
     const queue = [];
 
-    // Start from the squares occupied by the leader
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
             const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
@@ -56,12 +55,7 @@ async function deploy(dirX, dirY, rotation) {
         const curr = queue.shift();
         spots.push(curr);
         searchCount++;
-
-        const neighbors = [
-            { x: curr.x + gridScale, y: curr.y }, { x: curr.x - gridScale, y: curr.y },
-            { x: curr.x, y: curr.y + gridScale }, { x: curr.x, y: curr.y - gridScale }
-        ];
-
+        const neighbors = [{x:curr.x+gridScale,y:curr.y},{x:curr.x-gridScale,y:curr.y},{x:curr.x,y:curr.y+gridScale},{x:curr.x,y:curr.y-gridScale}];
         for (const n of neighbors) {
             const key = `${n.x},${n.y}`;
             if (visited.has(key)) continue;
@@ -72,50 +66,38 @@ async function deploy(dirX, dirY, rotation) {
         }
     }
 
-    // 2. Score squares for the tactical formation
-    // Forward Vector: (dirX, dirY)
-    // Sideways Vector: (-dirY, dirX)
-    const sideX = -dirY; 
-    const sideY = dirX;
-
-    // Formation Reference (Center of the leader token)
+    // 2. Score spots (Priority: Footprint -> Backward -> Sides -> Forward)
+    const sideX = -dirY; const sideY = dirX;
     const fCX = sX + (lW * gridScale / 2) - (gridScale / 2);
     const fCY = sY + (lH * gridScale / 2) - (gridScale / 2);
 
     const scoredSpots = spots.map(s => {
         const relX = (s.x - fCX) / gridScale;
         const relY = (s.y - fCY) / gridScale;
-        
-        // distF: Distance Forward from center
-        const distF = relX * dirX + relY * dirY;
-        // distS: Distance Sideways from center
-        const distS = Math.abs(relX * sideX + relY * sideY);
+        const distF = relX * dirX + relY * dirY; // Positive = in front of leaders
+        const distB = -distF; // Positive = behind leaders
+        const distS = relX * sideX + relY * sideY; // Sideways offset
+        const absS = Math.abs(distS);
 
         const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
 
-        // Scoring Logic:
-        // Priority 1: Footprint (Score 0-100)
-        // Priority 2: Forward 2-wide lane (Score 1000+)
-        // Priority 3: Forward wider (Score 2000+)
-        // Priority 4: Sideways/Backward (Score 5000+)
-        
-        let score = 5000;
+        let score = 20000;
         if (isFootprint) {
-            // Fill footprint from back-to-front relative to direction
-            score = 0 + (distF * -1); 
-        } else if (distF > 0.1) {
-            if (distS <= 0.6) score = 1000 + (distF * 10) + distS; // 2-wide lane
-            else score = 2000 + (distF * 10) + distS; // Expansion
+            // Footprint ranks 1-4 (Sorted Front-to-Back, Left-to-Right)
+            score = 0 + (distB * 10) + distS; 
+        } else if (distB > 0.1) {
+            // Trailing formation BEHIND the footprint
+            if (absS <= 0.6) score = 1000 + (distB * 10) + distS; // Preferred 2-wide lane
+            else score = 5000 + (distB * 10) + absS; // Wider expansion
         } else {
-            score = 5000 + Math.abs(distF) * 10 + distS; // Backward/Side
+            // Forward/Far side spots (Last resort)
+            score = 10000 + (distF * 10) + absS;
         }
-
         return { ...s, score };
     });
 
     scoredSpots.sort((a, b) => a.score - b.score);
 
-    // 3. Deploy actors
     const toCreate = partyActors.slice(0, scoredSpots.length).map((actor, i) => {
         const spot = scoredSpots[i];
         const data = actor.prototypeToken.toObject();
