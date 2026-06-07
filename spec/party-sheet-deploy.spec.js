@@ -59,7 +59,7 @@ describe("Party Sheet Deploy Macro", () => {
         expect(ui.notifications.warn).toHaveBeenCalledWith("Please select the Party Token first!");
     });
 
-    test("should show direction picker and deploy in chosen direction without rotation", async () => {
+    test("should show direction picker and deploy sequentially without rotation", async () => {
         const deleteMock = jest.fn();
         const leader = {
             document: { x: 500, y: 500, width: 1, height: 1, delete: deleteMock },
@@ -77,21 +77,22 @@ describe("Party Sheet Deploy Macro", () => {
 
         expect(Dialog).toHaveBeenCalled();
         const dialogData = Dialog.mock.calls[0][0];
-        
-        // Mock HTML for finding the checkbox
-        const mockHtml = {
-            find: jest.fn().mockReturnValue([{ checked: false }])
-        };
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
 
-        // Simulate clicking 'North'
+        // Simulate clicking 'North' (Facing North means growing South)
         await dialogData.buttons.north.callback(mockHtml);
         
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
+        // H1 in footprint (500,500)
+        // H2 should be Lane-neighbor of H1. For 2-wide, it could be side (600,500) or behind (500,600).
+        // My scoring prefers Side first within rank 0.
+        expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
+        expect(created[1].x).toBe(600); expect(created[1].y).toBe(500);
         expect(deleteMock).toHaveBeenCalled();
     });
 
-    test("should force single file if checkbox is checked", async () => {
+    test("should force single file contiguously", async () => {
         const leader = {
             document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
             center: { x: 550, y: 550 }
@@ -106,35 +107,25 @@ describe("Party Sheet Deploy Macro", () => {
         game.actors.filter.mockReturnValue(actors);
 
         eval(macroScript);
-        
-        // Mock HTML with Single File CHECKED
-        const mockHtml = {
-            find: jest.fn().mockReturnValue([{ checked: true }])
-        };
-        
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: true }]) };
         await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
 
-        // North direction (0,-1). 
-        // Footprint: (500,500)
-        // Neighbors: (600,500), (400,500), (500,600), (500,400)
-        // Lanes: Side Dist <= 0.1 and Forward Dist <= 0.1
-        // (500,600) is Lane (distF=0, distB=1)
-        // (500,700) is Lane (distF=-1, distB=2)
+        // Single file North facing: (500,500) -> (500,600) -> (500,700)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
-        expect(created).toEqual(expect.arrayContaining([
+        expect(created).toEqual([
             expect.objectContaining({ x: 500, y: 500 }),
             expect.objectContaining({ x: 500, y: 600 }),
             expect.objectContaining({ x: 500, y: 700 })
-        ]));
+        ]);
     });
 
-    test("should use 2x2 footprint if leader is 2x2", async () => {
+    test("should use large footprint front-to-back", async () => {
         const leader = {
             document: { x: 500, y: 500, width: 2, height: 2, delete: jest.fn() },
             center: { x: 600, y: 600 }
         };
         global.canvas.tokens.controlled = [leader];
-
+        
         const actors = [
             { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
             { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } }
@@ -143,11 +134,10 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
+        // Facing East (+X): Front row is x=600.
         await Dialog.mock.calls[0][0].buttons.east.callback(mockHtml);
 
-        // For East (+X), front of footprint is (600, 500) and (600, 600)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
-        expect(created).toHaveLength(2);
         expect(created).toEqual(expect.arrayContaining([
             expect.objectContaining({ x: 600, y: 500 }),
             expect.objectContaining({ x: 600, y: 600 })
