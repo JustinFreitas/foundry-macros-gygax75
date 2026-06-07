@@ -1,5 +1,5 @@
-// Party Sheet Deploy V19 (Tactical Cardinal Snake)
-// Combines 2-wide rank filling with cardinal marching preference [Opposite, CW, CW, CW].
+// Party Sheet Deploy V20 (Two-Tier Tactical Snake)
+// Fills ranks completely (2-wide) before moving back. Strictly contiguous and wall-breaking.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -48,15 +48,15 @@ async function deploy(dirX, dirY, isSingleFile) {
     const sideX = -dirY; const sideY = dirX;
     const laneLimit = isSingleFile ? 0.1 : 1.1;
 
-    // Search Sequence: [Opposite, CW, CW, CW]
+    // Cardinal Sequence: [Opposite, CW, CW, CW]
     const searchSequence = [
-        { x: -dirX, y: -dirY, weight: 1 }, // 1. Back
-        { x: -dirY, y: dirX,  weight: 2 }, // 2. CW
-        { x: dirX,  y: dirY,  weight: 3 }, // 3. Front
-        { x: dirY,  y: -dirX, weight: 4 }  // 4. CW again
+        { x: -dirX, y: -dirY, weight: 1 }, // Back
+        { x: -dirY, y: dirX,  weight: 2 }, // CW
+        { x: dirX,  y: dirY,  weight: 3 }, // Front
+        { x: dirY,  y: -dirX, weight: 4 }  // CW
     ];
 
-    // PASS 1: Initialize with Footprint
+    // PASS 1: Initialize with Footprint (Front-to-Back)
     const footprintCandidates = [];
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
@@ -75,15 +75,16 @@ async function deploy(dirX, dirY, isSingleFile) {
         if (i < footprintCandidates.length) {
             bestSpot = footprintCandidates[i];
         } else {
-            // Sequential Search: Find best adjacent spot to ANY placed token
-            const lastPlaced = finalSpots[finalSpots.length - 1];
+            // Sequential Tactical Search
             const frontier = [];
+            const illegalFrontier = [];
             
+            // Search neighbors of ALL placed tokens to find the best LEGAL spot
             for (let j = finalSpots.length - 1; j >= 0; j--) {
-                const p = finalSpots[j];
+                const parent = finalSpots[j];
                 for (const dir of searchSequence) {
-                    const nx = p.x + dir.x * gridScale;
-                    const ny = p.y + dir.y * gridScale;
+                    const nx = parent.x + dir.x * gridScale;
+                    const ny = parent.y + dir.y * gridScale;
                     const key = `${nx},${ny}`;
                     if (usedKeys.has(key)) continue;
 
@@ -93,35 +94,34 @@ async function deploy(dirX, dirY, isSingleFile) {
                     const distB = -distF;
                     const distS = Math.abs(relX * sideX + relY * sideY);
 
-                    // Skip if ahead of front rank (rank 0)
+                    // Skip spots ahead of front rank
                     if (distB < -0.1) continue;
 
                     const nC = { x: nx + gridScale/2, y: ny + gridScale / 2 };
-                    const pC = { x: p.x + gridScale/2, y: p.y + gridScale / 2 };
+                    const pC = { x: parent.x + gridScale/2, y: parent.y + gridScale / 2 };
                     const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
                     const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
                     const isLegal = !wall && reg;
 
-                    // SCORING:
-                    // 1. Proximity to Tail (Backtracking Penalty)
-                    const tailPenalty = (finalSpots.length - 1 - j) * 1000000;
-                    // 2. Legality
-                    const legalPriority = isLegal ? 0 : 500000;
-                    // 3. Lane Preference (1-wide or 2-wide)
-                    const lanePriority = (distS <= laneLimit) ? 0 : 100000;
-                    // 4. Rank Completion (Prefer filling the same rank/lowest rank)
-                    const rankScore = Math.floor(distB + 0.5) * 100;
-                    // 5. Cardinal Preference (Tie-breaker within rank)
-                    const cardinalScore = dir.weight;
+                    // SCORE COMPONENTS:
+                    const lanePriority = (distS <= laneLimit) ? 0 : 500000;
+                    const rankScore = Math.floor(distB + 0.5) * 10000;
+                    const tailPenalty = (finalSpots.length - 1 - j) * 1000;
+                    const score = lanePriority + rankScore + tailPenalty + dir.weight;
 
-                    const score = tailPenalty + legalPriority + lanePriority + rankScore + cardinalScore;
-                    frontier.push({ x: nx, y: ny, score });
+                    const candidate = { x: nx, y: ny, score };
+                    if (isLegal) frontier.push(candidate);
+                    else illegalFrontier.push(candidate);
                 }
             }
 
             if (frontier.length > 0) {
                 frontier.sort((a, b) => a.score - b.score);
                 bestSpot = frontier[0];
+            } else if (illegalFrontier.length > 0) {
+                // If NO legal spots, pick the best adjacent to the absolute TAIL
+                illegalFrontier.sort((a, b) => a.score - b.score);
+                bestSpot = illegalFrontier[0];
             }
         }
 
