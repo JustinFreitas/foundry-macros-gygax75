@@ -101,7 +101,7 @@ async function deploy(dirX, dirY, rotation) {
     const toCreate = partyActors.slice(0, scoredSpots.length).map((actor, i) => {
         const spot = scoredSpots[i];
         const data = actor.prototypeToken.toObject();
-        return { ...data, actorId: actor.id, x: spot.x, y: spot.y, rotation, hidden: false };
+        return { ...data, actorId: actor.id, x: spot.x, y: spot.y, hidden: false };
     });
 
     await canvas.scene.createEmbeddedDocuments("Token", toCreate);

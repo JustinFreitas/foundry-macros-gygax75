@@ -59,7 +59,7 @@ describe("Party Sheet Deploy Macro", () => {
         expect(ui.notifications.warn).toHaveBeenCalledWith("Please select the Party Token first!");
     });
 
-    test("should show direction picker and deploy in chosen direction with rotation", async () => {
+    test("should show direction picker and deploy in chosen direction without rotation", async () => {
         const deleteMock = jest.fn();
         const leader = {
             document: { x: 500, y: 500, width: 1, height: 1, delete: deleteMock },
@@ -78,17 +78,13 @@ describe("Party Sheet Deploy Macro", () => {
         expect(Dialog).toHaveBeenCalled();
         const dialogData = Dialog.mock.calls[0][0];
         
-        // Simulate clicking 'North' (rotation 0)
+        // Simulate clicking 'North'
         await dialogData.buttons.north.callback();
-
-        // H1: Footprint (500,500)
-        // H2: Neighbor North (Side step first doesn't matter for 1x1 footprint logic, 
-        // but BFS will find neighbors. For 1x1 footprint, (0,0) is filled. 
-        // Then neighbors of (0,0) are checked.
         
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
-        expect(created[0]).toEqual(expect.objectContaining({ name: 'H1', x: 500, y: 500, rotation: 0 }));
+        // Should NOT have rotation property
+        expect(created[0].rotation).toBeUndefined();
         expect(deleteMock).toHaveBeenCalled();
     });
 
