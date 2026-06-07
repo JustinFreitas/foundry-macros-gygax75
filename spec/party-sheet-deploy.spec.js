@@ -108,11 +108,11 @@ describe("Party Sheet Deploy Macro", () => {
         eval(macroScript);
         await Dialog.mock.calls[0][0].buttons.east.callback();
 
-        // Should fill (0,0) and (0,1) or (1,0) depending on loop order
+        // For East (+X), front of footprint is (600, 500) and (600, 600)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toEqual(expect.arrayContaining([
-            expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 500, y: 600 })
+            expect.objectContaining({ x: 600, y: 500 }),
+            expect.objectContaining({ x: 600, y: 600 })
         ]));
     });
 });
