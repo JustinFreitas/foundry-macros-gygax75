@@ -72,33 +72,32 @@ async function deploy(dirX, dirY, rotation) {
         const relX = (s.x - sX) / gridScale;
         const relY = (s.y - sY) / gridScale;
         
-        // distF: Forward distance along dirX/dirY
         const distF = relX * dirX + relY * dirY; 
         const distB = -distF; 
-
-        // Lane Calculation (distS):
-        // We want Lane 0 and Lane 1 to be the primary formation.
-        // We anchor the "left" edge (Lane 0) to the leader's footprint origin.
         const distS = relX * Math.abs(sideX) + relY * Math.abs(sideY);
+
+        const r = Math.floor(distB + 0.5); // Discrete Rank (0, 1, 2...)
+        const s_lane = Math.floor(distS + 0.5); // Discrete Lane (0, 1, 2...)
 
         const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
 
-        let score = 20000;
+        let priority = 10000;
         if (isFootprint) {
-            // Footprint ranks 1-4 (Front-to-Back, then Sideways)
-            score = 0 + (distB * 10) + distS; 
-        } else if (distB > 0.1) {
-            // Trailing formation BEHIND the footprint
-            // We PREFER Lane 0 and Lane 1 (distS <= 1) for a 2-wide formation
-            if (distS >= 0 && distS <= 1.1) {
-                score = 1000 + (distB * 10) + distS; 
-            } else {
-                score = 5000 + (distB * 10) + Math.abs(distS); 
-            }
+            priority = 0; 
+        } else if (r >= 0 && s_lane >= 0 && s_lane <= 1) {
+            // Preferred 2-wide formation trailing BEHIND the front line
+            priority = 1000; 
+        } else if (r >= 0) {
+            // Wider expansion trailing behind
+            priority = 5000; 
         } else {
-            // Forward/Far side spots (Last resort)
-            score = 10000 + (distF * 10) + Math.abs(distS);
+            // Spots ahead of the front line
+            priority = 8000;
         }
+
+        // Score: Priority -> Rank (distB) -> Lane (distS)
+        // This ensures Row 0 Lane 0, Row 0 Lane 1, Row 1 Lane 0, Row 1 Lane 1...
+        const score = priority + (r * 10) + distS;
         return { ...s, score };
     });
 
