@@ -1,5 +1,6 @@
-// Party Sheet Deploy V20 (Two-Tier Tactical Snake)
+// Party Sheet Deploy V21 (Tactical Greedy Cardinal Snake)
 // Fills ranks completely (2-wide) before moving back. Strictly contiguous and wall-breaking.
+// Cardinal Preference: [Opposite, CW, CW, CW]
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -50,10 +51,10 @@ async function deploy(dirX, dirY, isSingleFile) {
 
     // Cardinal Sequence: [Opposite, CW, CW, CW]
     const searchSequence = [
-        { x: -dirX, y: -dirY, weight: 1 }, // Back
-        { x: -dirY, y: dirX,  weight: 2 }, // CW
-        { x: dirX,  y: dirY,  weight: 3 }, // Front
-        { x: dirY,  y: -dirX, weight: 4 }  // CW
+        { x: -dirX, y: -dirY, weight: 1 }, // 1. Back (Opposite of facing)
+        { x: -dirY, y: dirX,  weight: 2 }, // 2. CW from Back
+        { x: dirX,  y: dirY,  weight: 3 }, // 3. Front (Facing)
+        { x: dirY,  y: -dirX, weight: 4 }  // 4. CW from Front
     ];
 
     // PASS 1: Initialize with Footprint (Front-to-Back)
@@ -61,8 +62,9 @@ async function deploy(dirX, dirY, isSingleFile) {
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
             const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
-            const distF = w * dirX + h * dirY;
-            const distS = Math.abs(w * sideX + h * sideY);
+            const relX = w; const relY = h;
+            const distF = relX * dirX + relY * dirY;
+            const distS = Math.abs(relX * sideX + relY * sideY);
             pt.score = (-distF * 10) + distS; 
             footprintCandidates.push(pt);
         }
@@ -79,7 +81,7 @@ async function deploy(dirX, dirY, isSingleFile) {
             const frontier = [];
             const illegalFrontier = [];
             
-            // Search neighbors of ALL placed tokens to find the best LEGAL spot
+            // Search neighbors of ALL placed tokens to find the best spot
             for (let j = finalSpots.length - 1; j >= 0; j--) {
                 const parent = finalSpots[j];
                 for (const dir of searchSequence) {
@@ -94,7 +96,6 @@ async function deploy(dirX, dirY, isSingleFile) {
                     const distB = -distF;
                     const distS = Math.abs(relX * sideX + relY * sideY);
 
-                    // Skip spots ahead of front rank
                     if (distB < -0.1) continue;
 
                     const nC = { x: nx + gridScale/2, y: ny + gridScale / 2 };
@@ -103,11 +104,13 @@ async function deploy(dirX, dirY, isSingleFile) {
                     const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
                     const isLegal = !wall && reg;
 
-                    // SCORE COMPONENTS:
-                    const lanePriority = (distS <= laneLimit) ? 0 : 500000;
-                    const rankScore = Math.floor(distB + 0.5) * 10000;
+                    // SCORE PRIORITIES:
+                    const lanePenalty = (distS <= laneLimit) ? 0 : 5000000;
+                    const rankScore = Math.max(0, Math.floor(distB + 0.5)) * 100000;
+                    // Tail Proximity: prioritize squares touching the end of the line
                     const tailPenalty = (finalSpots.length - 1 - j) * 1000;
-                    const score = lanePriority + rankScore + tailPenalty + dir.weight;
+                    // Cardinal weight is the final tie-breaker
+                    const score = lanePenalty + rankScore + tailPenalty + dir.weight;
 
                     const candidate = { x: nx, y: ny, score };
                     if (isLegal) frontier.push(candidate);
