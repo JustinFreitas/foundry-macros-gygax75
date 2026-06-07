@@ -1,5 +1,5 @@
-// Party Sheet Deploy V13 (Tactical Formation with Single-File Toggle)
-// Ranks 1-4 take the front (Footprint), Ranks 5-9 fill in BEHIND them.
+// Party Sheet Deploy V14 (Contiguous Tail-First Formation)
+// Ranks 1-4 take the front (Footprint), Ranks 5-9 fill lanes, then fan out from the tail.
 
 const leaderToken = canvas.tokens.controlled[0];
 
@@ -43,83 +43,94 @@ async function deploy(dirX, dirY, isSingleFile) {
     let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
     partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
 
-    // 1. BFS to find all reachable legal spots and record discovery order
-    const spots = [];
-    const visited = new Set();
-    const queue = [];
+    const finalSpots = [];
+    const usedKeys = new Set();
+    const sideX = -dirY; const sideY = dirX;
 
-    // Initialize with footprint squares
+    // --- PASS 1: FILL FOOTPRINT ---
+    const footprintSpots = [];
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
-            const pt = { x: sX + w * gridScale, y: sY + h * gridScale, searchIndex: 0 };
-            queue.push(pt);
-            visited.add(`${pt.x},${pt.y}`);
+            const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
+            const distF = w * dirX + h * dirY;
+            const distS = Math.abs(w * sideX + h * sideY);
+            // Score footprint spots front-to-back, then sideways
+            pt.score = (-distF * 10) + distS;
+            footprintSpots.push(pt);
         }
     }
+    footprintSpots.sort((a, b) => a.score - b.score);
+    
+    for (const s of footprintSpots) {
+        if (finalSpots.length >= partyActors.length) break;
+        delete s.score;
+        finalSpots.push(s);
+        usedKeys.add(`${s.x},${s.y}`);
+    }
 
-    let searchCount = 0;
-    while (queue.length > 0 && searchCount < 500) {
-        const curr = queue.shift();
-        spots.push(curr);
-        searchCount++;
-
-        const neighbors = [
-            { x: curr.x + gridScale, y: curr.y }, { x: curr.x - gridScale, y: curr.y },
-            { x: curr.x, y: curr.y + gridScale }, { x: curr.x, y: curr.y - gridScale }
-        ];
-
+    // --- PASS 2: FILL LANES (BFS from footprint, constrained to lanes) ---
+    const laneQueue = [...finalSpots];
+    let lIdx = 0;
+    while (lIdx < laneQueue.length && finalSpots.length < partyActors.length) {
+        const curr = laneQueue[lIdx++];
+        // Neighbors: Forward/Backward and Side-to-Side
+        const neighbors = [{x:curr.x+gridScale,y:curr.y},{x:curr.x-gridScale,y:curr.y},{x:curr.x,y:curr.y+gridScale},{x:curr.x,y:curr.y-gridScale}];
+        
         for (const n of neighbors) {
             const key = `${n.x},${n.y}`;
-            if (visited.has(key)) continue;
+            if (usedKeys.has(key)) continue;
 
             const nC = { x: n.x + gridScale / 2, y: n.y + gridScale / 2 };
-            const wall = CONFIG.Canvas.polygonBackends.move.testCollision({x: curr.x + gridScale/2, y: curr.y+gridScale/2}, nC, { type: "move", mode: "any" });
-            const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
+            const relX = (n.x - sX) / gridScale;
+            const relY = (n.y - sY) / gridScale;
+            
+            const distF = relX * dirX + relY * dirY;
+            const distS = Math.abs(relX * sideX + relY * sideY);
 
-            if (!wall && reg) {
-                visited.add(key);
-                queue.push({ ...n, searchIndex: searchCount });
+            // Is it a lane spot? (Behind only, 2-wide max, or 1-wide if forced)
+            const laneLimit = isSingleFile ? 0.1 : 1.1;
+            if (distS <= laneLimit && distF <= 0.1) {
+                const wall = CONFIG.Canvas.polygonBackends.move.testCollision({x: curr.x + gridScale/2, y: curr.y+gridScale/2}, nC, { type: "move", mode: "any" });
+                const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
+                if (!wall && reg) {
+                    usedKeys.add(key);
+                    finalSpots.push(n);
+                    laneQueue.push(n);
+                    if (finalSpots.length >= partyActors.length) break;
+                }
             }
         }
     }
 
-    // 2. Score spots (Priority: Footprint -> Adjacency-First Lanes -> Adjacency-First Expansion)
-    const sideX = -dirY; const sideY = dirX;
-    const scoredSpots = spots.map(s => {
-        const relX = (s.x - sX) / gridScale;
-        const relY = (s.y - sY) / gridScale;
-        
-        const distF = relX * dirX + relY * dirY; 
-        const distB = -distF; 
-        const distS = relX * Math.abs(sideX) + relY * Math.abs(sideY);
-
-        const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
-        
-        // Define Lane Preference based on Single File checkbox
-        const laneWidth = isSingleFile ? 0.1 : 1.1;
-        const isLane = distS >= 0 && distS <= laneWidth && distB >= -0.1;
-
-        let priority = 10000;
-        if (isFootprint) {
-            priority = 0; 
-        } else if (isLane) {
-            priority = 1000; // Preferred column trailing behind
-        } else {
-            priority = 5000; // Expansion into the rest of the reachable area
+    // --- PASS 3: EXPANSION (BFS from current formation, discovery order only) ---
+    const expQueue = [...finalSpots];
+    let eIdx = 0;
+    while (eIdx < expQueue.length && finalSpots.length < partyActors.length) {
+        const curr = expQueue[eIdx++];
+        const neighbors = [{x:curr.x+gridScale,y:curr.y},{x:curr.x-gridScale,y:curr.y},{x:curr.x,y:curr.y+gridScale},{x:curr.x,y:curr.y-gridScale}];
+        for (const n of neighbors) {
+            const key = `${n.x},${n.y}`;
+            if (usedKeys.has(key)) continue;
+            const nC = { x: n.x + gridScale / 2, y: n.y + gridScale / 2 };
+            const wall = CONFIG.Canvas.polygonBackends.move.testCollision({x: curr.x + gridScale/2, y: curr.y+gridScale/2}, nC, { type: "move", mode: "any" });
+            const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
+            if (!wall && reg) {
+                usedKeys.add(key);
+                finalSpots.push(n);
+                expQueue.push(n);
+                if (finalSpots.length >= partyActors.length) break;
+            }
         }
+    }
 
-        const score = priority + (s.searchIndex * 10) + distS;
-        return { ...s, score };
-    });
-
-    scoredSpots.sort((a, b) => a.score - b.score);
-
-    const toCreate = partyActors.slice(0, scoredSpots.length).map((actor, i) => {
-        const spot = scoredSpots[i];
+    // 4. Create tokens
+    const toCreate = partyActors.slice(0, finalSpots.length).map((actor, i) => {
+        const spot = finalSpots[i];
         const data = actor.prototypeToken.toObject();
         return { ...data, actorId: actor.id, x: spot.x, y: spot.y, hidden: false };
     });
 
     await canvas.scene.createEmbeddedDocuments("Token", toCreate);
     leaderToken.document.delete();
+    ui.notifications.info(`Deployed ${toCreate.length} party characters.`);
 }

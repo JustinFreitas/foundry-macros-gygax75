@@ -115,10 +115,11 @@ describe("Party Sheet Deploy Macro", () => {
         await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
 
         // North direction (0,-1). 
-        // Footprint (0,0) -> (500,500)
-        // Expansion backward (South) in single file (Lane 0 only)
-        // Rank 1 Lane 0: (0, 1) -> (500, 600)
-        // Rank 2 Lane 0: (0, 2) -> (500, 700)
+        // Footprint: (500,500)
+        // Neighbors: (600,500), (400,500), (500,600), (500,400)
+        // Lanes: Side Dist <= 0.1 and Forward Dist <= 0.1
+        // (500,600) is Lane (distF=0, distB=1)
+        // (500,700) is Lane (distF=-1, distB=2)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toEqual(expect.arrayContaining([
             expect.objectContaining({ x: 500, y: 500 }),
@@ -133,7 +134,7 @@ describe("Party Sheet Deploy Macro", () => {
             center: { x: 600, y: 600 }
         };
         global.canvas.tokens.controlled = [leader];
-        
+
         const actors = [
             { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
             { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } }
@@ -144,11 +145,12 @@ describe("Party Sheet Deploy Macro", () => {
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
         await Dialog.mock.calls[0][0].buttons.east.callback(mockHtml);
 
-        // Adjacency-first fills footprint from top-left (500,500) then (600,500)...
+        // For East (+X), front of footprint is (600, 500) and (600, 600)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+        expect(created).toHaveLength(2);
         expect(created).toEqual(expect.arrayContaining([
-            expect.objectContaining({ x: 500, y: 500 }),
-            expect.objectContaining({ x: 600, y: 500 })
+            expect.objectContaining({ x: 600, y: 500 }),
+            expect.objectContaining({ x: 600, y: 600 })
         ]));
     });
 });
