@@ -68,30 +68,36 @@ async function deploy(dirX, dirY, rotation) {
 
     // 2. Score spots (Priority: Footprint -> Backward -> Sides -> Forward)
     const sideX = -dirY; const sideY = dirX;
-    const fCX = sX + (lW * gridScale / 2) - (gridScale / 2);
-    const fCY = sY + (lH * gridScale / 2) - (gridScale / 2);
-
     const scoredSpots = spots.map(s => {
-        const relX = (s.x - fCX) / gridScale;
-        const relY = (s.y - fCY) / gridScale;
-        const distF = relX * dirX + relY * dirY; // Positive = in front of leaders
-        const distB = -distF; // Positive = behind leaders
-        const distS = relX * sideX + relY * sideY; // Sideways offset
-        const absS = Math.abs(distS);
+        const relX = (s.x - sX) / gridScale;
+        const relY = (s.y - sY) / gridScale;
+        
+        // distF: Forward distance along dirX/dirY
+        const distF = relX * dirX + relY * dirY; 
+        const distB = -distF; 
+
+        // Lane Calculation (distS):
+        // We want Lane 0 and Lane 1 to be the primary formation.
+        // We anchor the "left" edge (Lane 0) to the leader's footprint origin.
+        const distS = relX * Math.abs(sideX) + relY * Math.abs(sideY);
 
         const isFootprint = (s.x >= sX && s.x < sX + lW * gridScale && s.y >= sY && s.y < sY + lH * gridScale);
 
         let score = 20000;
         if (isFootprint) {
-            // Footprint ranks 1-4 (Sorted Front-to-Back, Left-to-Right)
+            // Footprint ranks 1-4 (Front-to-Back, then Sideways)
             score = 0 + (distB * 10) + distS; 
         } else if (distB > 0.1) {
             // Trailing formation BEHIND the footprint
-            if (absS <= 0.6) score = 1000 + (distB * 10) + distS; // Preferred 2-wide lane
-            else score = 5000 + (distB * 10) + absS; // Wider expansion
+            // We PREFER Lane 0 and Lane 1 (distS <= 1) for a 2-wide formation
+            if (distS >= 0 && distS <= 1.1) {
+                score = 1000 + (distB * 10) + distS; 
+            } else {
+                score = 5000 + (distB * 10) + Math.abs(distS); 
+            }
         } else {
             // Forward/Far side spots (Last resort)
-            score = 10000 + (distF * 10) + absS;
+            score = 10000 + (distF * 10) + Math.abs(distS);
         }
         return { ...s, score };
     });
