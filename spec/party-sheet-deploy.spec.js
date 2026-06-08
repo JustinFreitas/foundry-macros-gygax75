@@ -46,6 +46,44 @@ global.Dialog = jest.fn(function(dialogData) {
     this.data = dialogData;
 });
 
+// Build a token actor stub with the given id/name.
+function actor(id) {
+    return {
+        id,
+        name: id,
+        type: 'character',
+        flags: { ose: { party: true } },
+        prototypeToken: { toObject: () => ({ name: id }) }
+    };
+}
+
+// Convert a pixel center (gridScale 100) back to integer grid coords.
+function cellOf(center) {
+    return { gx: Math.floor(center.x / 100), gy: Math.floor(center.y / 100) };
+}
+
+// Mock testCollision so that travel between any unordered pair of adjacent
+// cells listed in `blocked` (each entry [[gx,gy],[gx,gy]]) is walled off.
+function blockEdges(blocked) {
+    const set = new Set();
+    for (const [a, b] of blocked) {
+        set.add(`${a[0]},${a[1]}->${b[0]},${b[1]}`);
+        set.add(`${b[0]},${b[1]}->${a[0]},${a[1]}`);
+    }
+    global.CONFIG.Canvas.polygonBackends.move.testCollision.mockImplementation((pC, nC) => {
+        const p = cellOf(pC);
+        const n = cellOf(nC);
+        return set.has(`${p.gx},${p.gy}->${n.gx},${n.gy}`);
+    });
+}
+
+// Set of "x,y" pixel coords from a createEmbeddedDocuments call, for order-free
+// membership assertions.
+function placedCoords() {
+    const created = global.canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+    return created.map(t => `${t.x},${t.y}`);
+}
+
 describe("Party Sheet Deploy Macro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -118,28 +156,213 @@ describe("Party Sheet Deploy Macro", () => {
         ]);
     });
 
-    test("should fill large footprint greedily front-to-back", async () => {
+    test("multi-cell party token anchors at the front/lowest-lane footprint corner", async () => {
+        // 2x2 token at (500,500). Facing East, the anchor is the frontmost (east),
+        // lowest-lane (north) corner = (600,500). Double file then partners south.
         const leader = {
             document: { x: 500, y: 500, width: 2, height: 2, delete: jest.fn() },
             center: { x: 600, y: 600 }
         };
         global.canvas.tokens.controlled = [leader];
-        
-        const actors = [
-            { id: 'a1', name: 'H1', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H1' }) } },
-            { id: 'a2', name: 'H2', type: 'character', flags: { ose: { party: true } }, prototypeToken: { toObject: () => ({ name: 'H2' }) } }
-        ];
-        game.actors.filter.mockReturnValue(actors);
+        game.actors.filter.mockReturnValue([actor('a1'), actor('a2')]);
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
-        // Facing East (+X): Front row is x=600.
         await Dialog.mock.calls[0][0].buttons.east.callback(mockHtml);
 
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
-        // H1 should be front-most footprint square. For East, this is (600,500)
         expect(created[0].x).toBe(600); expect(created[0].y).toBe(500);
         expect(created[1].x).toBe(600); expect(created[1].y).toBe(600);
+    });
+
+    test("a 2x2 party token deploys identically to a 1x1 at its top-left corner (north)", async () => {
+        // Same 6-actor double-file north layout must come out whether the party
+        // token is 1x1 at (500,500) or 2x2 occupying (500,500)..(600,600): the
+        // 2x2 anchors at its top-left corner (500,500) and ignores its bulk.
+        const run = async (width, height) => {
+            jest.clearAllMocks();
+            global.canvas.tokens.controlled = [{
+                document: { x: 500, y: 500, width, height, delete: jest.fn() },
+                center: { x: 500 + width * 50, y: 500 + height * 50 }
+            }];
+            global.canvas.regions.placeables = [];
+            global.CONFIG.Canvas.polygonBackends.move.testCollision.mockReturnValue(false);
+            game.actors.filter.mockReturnValue(
+                ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'].map(actor)
+            );
+            eval(macroScript);
+            const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
+            await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+            return placedCoords();
+        };
+
+        const oneByOne = await run(1, 1);
+        const twoByTwo = await run(2, 2);
+        expect(twoByTwo).toEqual(oneByOne);
+        // And concretely: the tidy 2x3 block anchored at the top-left corner.
+        expect(twoByTwo).toEqual([
+            '500,500', '600,500',
+            '500,600', '600,600',
+            '500,700', '600,700'
+        ]);
+    });
+
+    // --- Wall-honoring flow -------------------------------------------------
+
+    test("double file completes the rank, then steps back on the unwalled lane", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue([actor('a1'), actor('a2'), actor('a3')]);
+
+        // Leader at grid (5,5), facing North. Wall the edge straight back to (5,6).
+        blockEdges([[[5, 5], [5, 6]]]);
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        const coords = placedCoords();
+        expect(coords).toHaveLength(3);
+        // Nobody crosses the wall straight back from the leader.
+        expect(coords).not.toContain('500,600');
+        // Serpentine: fill the rank partner (600,500), then resume "backward" on
+        // the lane that ISN'T walled off -> (600,600).
+        expect(coords).toEqual(['500,500', '600,500', '600,600']);
+    });
+
+    test("single file follows an L-bend defined by a region, never crossing the wall", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue([actor('a1'), actor('a2'), actor('a3'), actor('a4')]);
+
+        // Corridor region (in grid cells): straight back from the leader two
+        // cells, then it turns east. Single file is normally a straight column,
+        // but the strict lane only excludes off-lane cells from being *filled* —
+        // here the region itself is the corridor, so we use double file to let
+        // the formation actually round the corner.
+        //   (5,5) leader
+        //   (5,6)
+        //   (5,7) (6,7) (7,7)   <- the bend runs east
+        const corridor = new Set(['5,5', '5,6', '5,7', '6,7', '7,7']);
+        global.canvas.regions.placeables = [{
+            testPoint: (c) => corridor.has(`${Math.floor(c.x / 100)},${Math.floor(c.y / 100)}`)
+        }];
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
+        // Facing North => "back" runs +y, i.e. down the corridor and around the bend.
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        const coords = placedCoords();
+        // All four actors are seated...
+        expect(coords).toHaveLength(4);
+        // ...every placed cell lies within the corridor region (nothing leaks
+        // out the side of the bend)...
+        for (const c of coords) {
+            const [x, y] = c.split(',').map(Number);
+            expect(corridor.has(`${x / 100},${y / 100}`)).toBe(true);
+        }
+        // ...and the formation actually rounds the corner: the straight column
+        // (5,5),(5,6),(5,7) is filled and then the bend cell (6,7) is used.
+        expect(coords).toEqual(
+            expect.arrayContaining(['500,500', '500,600', '500,700', '600,700'])
+        );
+    });
+
+    test("double file forms a contiguous two-wide column in open space (serpentine fill)", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue(
+            ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'].map(actor)
+        );
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        const coords = placedCoords();
+        // Each rank is filled two-abreast before stepping back: a tidy 2x3 block
+        // behind the leader. (The fill ORDER serpentines, but the final block is
+        // a clean marching column.)
+        expect(new Set(coords)).toEqual(new Set([
+            '500,500', '600,500', // rank 0
+            '500,600', '600,600', // rank 1
+            '500,700', '600,700'  // rank 2
+        ]));
+        // And no rank is ever skipped / no token floats off on its own.
+        expect(coords).toHaveLength(6);
+    });
+
+    test("single-file trail follows an L-shaped corridor around the bend", async () => {
+        // Leader at grid (5,5), party heading WEST -> leader is westmost and the
+        // single-file trail extends EAST behind it down the corridor. At column 9
+        // the corridor turns NORTH, so the footsteps follow it: straight east to
+        // the corner, then straight north up the new leg. The trail keeps going
+        // straight in its current heading and only turns where the corridor does.
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue(
+            ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'].map(actor)
+        );
+
+        // L-shaped corridor region: row y=5 from x=5..9, then column x=9 going up
+        // (y=4,3,2,1). One cell wide throughout.
+        const corridor = new Set([
+            '5,5', '6,5', '7,5', '8,5', '9,5', // east leg
+            '9,4', '9,3', '9,2', '9,1'         // north leg
+        ]);
+        global.canvas.regions.placeables = [{
+            testPoint: (c) => corridor.has(`${Math.floor(c.x / 100)},${Math.floor(c.y / 100)}`)
+        }];
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: true }]) }; // single file
+        await Dialog.mock.calls[0][0].buttons.west.callback(mockHtml);
+
+        const coords = placedCoords();
+        // Exactly one token per corridor cell, in path order: east leg then the
+        // north leg around the bend. Strictly one wide the whole way.
+        expect(coords).toEqual([
+            '500,500', '600,500', '700,500', '800,500', '900,500', // east
+            '900,400', '900,300', '900,200', '900,100'             // north
+        ]);
+    });
+
+    test("reports a shortfall when the reachable area cannot seat everyone", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue([actor('a1'), actor('a2'), actor('a3')]);
+
+        // A single-cell "closet": the leader cell is the only one in-region.
+        global.canvas.regions.placeables = [{
+            testPoint: (c) => Math.floor(c.x / 100) === 5 && Math.floor(c.y / 100) === 5
+        }];
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
+        expect(created).toHaveLength(1); // only the leader cell could be filled
+        expect(created[0].x).toBe(500); expect(created[0].y).toBe(500);
+        expect(ui.notifications.warn).toHaveBeenCalledWith(
+            expect.stringContaining('2 could not fit')
+        );
     });
 });
