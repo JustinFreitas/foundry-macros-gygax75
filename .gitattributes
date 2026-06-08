@@ -1,0 +1,4 @@
+# Normalize line endings: store as LF in the repo, check out native on each OS.
+# Keeps Windows working copies from churning files to CRLF in commits and avoids
+# diffs between local (Windows) and CI (Linux) checkouts.
+* text=auto eol=lf

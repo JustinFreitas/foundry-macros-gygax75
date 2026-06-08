@@ -1,0 +1,20 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+ is required: the scripts use iterator helpers like
+          # `map.keys().toArray()`. 24 matches the local dev runtime.
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
