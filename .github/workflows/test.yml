@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 22+ is required: the scripts use iterator helpers like
+          # `map.keys().toArray()`. 24 matches the local dev runtime.
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm test

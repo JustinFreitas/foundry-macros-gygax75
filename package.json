@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "actor-treasure-stow.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "jest"
   },
