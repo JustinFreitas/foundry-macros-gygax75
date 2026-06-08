@@ -38,11 +38,11 @@ if (partyActors.length === 0) {
 
     const content = `
         <h2>Marching Order</h2>
-        <p><strong>Single File</strong> (front to back):</p>
+        <p><strong>Single File</strong> (5' squares) &mdash; front to back:</p>
         <ol style="margin-top:0;">${singleRows}</ol>
-        <p><strong>Double File</strong> (front rank first):</p>
+        <p><strong>Double File</strong> (5' squares) &mdash; front rank first:</p>
         ${fileRows(2)}
-        <p><strong>Triple File</strong> (front rank first):</p>
+        <p><strong>Triple File</strong> (10' squares) &mdash; front rank first:</p>
         ${fileRows(3)}
     `;
 

@@ -44,6 +44,17 @@ describe("Show Marching Order Macro", () => {
         expect(ChatMessage.create).not.toHaveBeenCalled();
     });
 
+    test("labels each formation with its assumed square size", () => {
+        game.actors.filter.mockReturnValue([actor('a1', 'Fighter', 1)]);
+        eval(macroScript);
+
+        const content = chatContent();
+        // 5' squares for single/double (gridded combat); 10' for triple.
+        expect(content).toMatch(/Single File<\/strong>\s*\(5' squares\)/);
+        expect(content).toMatch(/Double File<\/strong>\s*\(5' squares\)/);
+        expect(content).toMatch(/Triple File<\/strong>\s*\(10' squares\)/);
+    });
+
     test("single file lists characters in marching order, front to back", () => {
         game.actors.filter.mockReturnValue([
             actor('a3', 'Cleric', 3),
