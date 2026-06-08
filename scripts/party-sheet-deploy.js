@@ -1,37 +1,58 @@
-// Party Sheet Deploy V21 (Tactical Greedy Cardinal Snake)
-// Fills ranks completely (2-wide) before moving back. Strictly contiguous and wall-breaking.
-// Cardinal Preference: [Opposite, CW, CW, CW]
+// Party Sheet Deploy
+// Replaces the selected Party token with the adventuring party from the OSE
+// Party Sheet, placed in marching order (single or double file) facing a chosen
+// direction.
+//
+// Placement traces the party as a TRAIL OF FOOTSTEPS. The leader is frontmost
+// in the chosen (travel) direction; everyone else trails backward along the
+// path the column walked in on:
+//   * the trail is a PATH, not a region fill — it advances from its current end
+//     and never spreads sideways onto an already-occupied rank;
+//   * single file is strictly one cell wide; double file places each rank two
+//     abreast (rank 1 = tokens 1 & 2, rank 2 = 3 & 4, ...);
+//   * it prefers to keep going straight in its current heading and only TURNS
+//     when a wall/door or the region edge blocks the way, then keeps straight in
+//     the new heading — so it follows a corridor around its bends;
+//   * every step is checked for walls/doors (move-collision) and region
+//     containment, so a token can never land across a wall;
+//   * a diagonal is never stepped, so it can't cut through a wall corner.
+// If the path dead-ends before everyone is placed, the rest are dropped and the
+// shortfall is reported.
 
 const leaderToken = canvas.tokens.controlled[0];
 
 if (!leaderToken) {
     ui.notifications.warn("Please select the Party Token first!");
+} else if (getPartyActors().length === 0) {
+    ui.notifications.warn("No characters found in the OSE Party Sheet!");
 } else {
-    let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
+    new Dialog({
+        title: "Marching Formation",
+        content: `
+            <p style='text-align:center;'>Which direction is the party facing?</p>
+            <div class="form-group" style="display: flex; align-items: center; margin-bottom: 10px;">
+                <label style="flex: 1;">Single File Formation</label>
+                <input type="checkbox" name="singleFile" style="flex: 0 0 20px;">
+            </div>
+        `,
+        buttons: {
+            north: { label: "North", callback: (html) => deploy(0, -1, html.find('[name="singleFile"]')[0].checked) },
+            east:  { label: "East",  callback: (html) => deploy(1, 0,  html.find('[name="singleFile"]')[0].checked) },
+            south: { label: "South", callback: (html) => deploy(0, 1,  html.find('[name="singleFile"]')[0].checked) },
+            west:  { label: "West",  callback: (html) => deploy(-1, 0, html.find('[name="singleFile"]')[0].checked) }
+        },
+        default: "north"
+    }).render(true);
+}
 
-    if (partyActors.length === 0) {
-        ui.notifications.warn("No characters found in the OSE Party Sheet!");
-    } else {
-        partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
-
-        new Dialog({
-            title: "Marching Formation",
-            content: `
-                <p style='text-align:center;'>Which direction is the party facing?</p>
-                <div class="form-group" style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <label style="flex: 1;">Single File Formation</label>
-                    <input type="checkbox" name="singleFile" style="flex: 0 0 20px;">
-                </div>
-            `,
-            buttons: {
-                north: { label: "North", callback: (html) => deploy(0, -1, html.find('[name="singleFile"]')[0].checked) },
-                east:  { label: "East",  callback: (html) => deploy(1, 0,  html.find('[name="singleFile"]')[0].checked) },
-                south: { label: "South", callback: (html) => deploy(0, 1,  html.find('[name="singleFile"]')[0].checked) },
-                west:  { label: "West",  callback: (html) => deploy(-1, 0, html.find('[name="singleFile"]')[0].checked) }
-            },
-            default: "north"
-        }).render(true);
-    }
+function getPartyActors() {
+    return game.actors
+        .filter(actor => actor.type === 'character' && actor.flags.ose?.party === true)
+        // Sort by marching order, breaking ties by id so deployments are reproducible.
+        .sort((a, b) => {
+            const orderDiff = (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999);
+            return orderDiff !== 0 ? orderDiff : a.id.localeCompare(b.id);
+        });
 }
 
 async function deploy(dirX, dirY, isSingleFile) {
@@ -41,106 +62,150 @@ async function deploy(dirX, dirY, isSingleFile) {
     const lCenter = leaderToken.center;
     const leaderRegions = canvas.regions.placeables.filter(r => r.testPoint(lCenter));
 
-    let partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true);
-    partyActors.sort((a, b) => (a.flags.ose?.marchingOrder ?? 999) - (b.flags.ose?.marchingOrder ?? 999));
+    const partyActors = getPartyActors();
 
-    const finalSpots = [];
-    const usedKeys = new Set();
-    const sideX = -dirY; const sideY = dirX;
-    const laneLimit = isSingleFile ? 0.1 : 1.1;
+    // The trail grows BACKWARD (opposite the facing direction) and, in double
+    // file, one cell to the "side" (perpendicular).
+    const back = { x: -dirX, y: -dirY };
+    const side = { x: -dirY, y: dirX };  // 90° CW of forward
 
-    // Cardinal Sequence: [Opposite, CW, CW, CW]
-    const searchSequence = [
-        { x: -dirX, y: -dirY, weight: 1 }, // 1. Back (Opposite of facing)
-        { x: -dirY, y: dirX,  weight: 2 }, // 2. CW from Back
-        { x: dirX,  y: dirY,  weight: 3 }, // 3. Front (Facing)
-        { x: dirY,  y: -dirX, weight: 4 }  // 4. CW from Front
-    ];
+    const cellCenter = (gx, gy) => ({ x: gx * gridScale + gridScale / 2, y: gy * gridScale + gridScale / 2 });
+    const inRegion = (c) => leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(c));
+    const wallFree = (a, b) => !CONFIG.Canvas.polygonBackends.move.testCollision(a, b, { type: "move", mode: "any" });
 
-    // PASS 1: Initialize with Footprint (Front-to-Back)
-    const footprintCandidates = [];
+    // Grid-unit coordinates of the leader's front-left footprint cell.
+    const startGX = Math.round(sX / gridScale);
+    const startGY = Math.round(sY / gridScale);
+
+    // Can the trail step from an occupied cell to an empty neighbour? The step
+    // must not cross a wall/door and the destination must be inside the region.
+    const canStep = (fromGX, fromGY, toGX, toGY) =>
+        wallFree(cellCenter(fromGX, fromGY), cellCenter(toGX, toGY)) &&
+        inRegion(cellCenter(toGX, toGY));
+
+    // Decompose a cell's offset from the leader start into rank (cells behind the
+    // front; grows down the column) and lane (signed cells along the side axis).
+    const rankOf = (gx, gy) => (gx - startGX) * back.x + (gy - startGY) * back.y;
+    const laneOf = (gx, gy) => (gx - startGX) * side.x + (gy - startGY) * side.y;
+
+    // The party is a trail of footsteps. The leader is frontmost in the travel
+    // direction; everyone else trails BACKWARD along the path the column walked.
+    // The line is a PATH, not a region fill — it advances from its current end
+    // and never spreads sideways onto an already-occupied rank. In single file
+    // it is strictly one cell wide; in double file each rank is two abreast.
+    const occupied = new Set();
+    const ordered = [];
+
+    const place = (gx, gy) => {
+        occupied.add(`${gx},${gy}`);
+        ordered.push({ gx, gy });
+    };
+
+    // Seed from a single ANCHOR cell so a multi-cell party token (e.g. 2x2)
+    // deploys exactly like a 1x1 dropped at the right corner. The anchor is the
+    // footprint corner that is frontmost in the travel direction and on the
+    // lowest lane — for north that is the top-left cell. The trail then grows
+    // backward from there; the rest of the footprint is just vacated.
+    let anchor = null;
     for (let w = 0; w < lW; w++) {
         for (let h = 0; h < lH; h++) {
-            const pt = { x: sX + w * gridScale, y: sY + h * gridScale };
-            const relX = w; const relY = h;
-            const distF = relX * dirX + relY * dirY;
-            const distS = Math.abs(relX * sideX + relY * sideY);
-            pt.score = (-distF * 10) + distS; 
-            footprintCandidates.push(pt);
+            const cand = { gx: startGX + w, gy: startGY + h };
+            if (anchor === null) { anchor = cand; continue; }
+            const dRank = rankOf(cand.gx, cand.gy) - rankOf(anchor.gx, anchor.gy);
+            const dLane = laneOf(cand.gx, cand.gy) - laneOf(anchor.gx, anchor.gy);
+            // Frontmost = smallest rank; tie-break to the lowest lane.
+            if (dRank < -0.1 || (Math.abs(dRank) < 0.1 && dLane < -0.1)) anchor = cand;
         }
     }
-    footprintCandidates.sort((a, b) => a.score - b.score);
+    place(anchor.gx, anchor.gy);
 
-    for (let i = 0; i < partyActors.length; i++) {
-        let bestSpot = null;
+    // The current rank's placed cells (1 in single file, up to 2 in double) and
+    // the direction the trail is currently travelling backward. The heading
+    // starts on the pure "back" axis and updates whenever the path bends, so we
+    // keep going straight in the NEW heading and only turn again at the next wall.
+    let rank = [ordered[ordered.length - 1]];
+    let heading = { x: back.x, y: back.y };
 
-        if (i < footprintCandidates.length) {
-            bestSpot = footprintCandidates[i];
-        } else {
-            // Sequential Tactical Search
-            const frontier = [];
-            const illegalFrontier = [];
-            
-            // Search neighbors of ALL placed tokens to find the best spot
-            for (let j = finalSpots.length - 1; j >= 0; j--) {
-                const parent = finalSpots[j];
-                for (const dir of searchSequence) {
-                    const nx = parent.x + dir.x * gridScale;
-                    const ny = parent.y + dir.y * gridScale;
-                    const key = `${nx},${ny}`;
-                    if (usedKeys.has(key)) continue;
+    // Step candidates from a cell, preference order: straight on the heading,
+    // then either turn, then reverse (rarely used — only to back into a pocket
+    // when nothing else is open). Diagonals are excluded so the trail can't cut
+    // a wall corner.
+    const stepsFor = (h) => [
+        { x: h.x, y: h.y },
+        { x: -h.y, y: h.x },
+        { x: h.y, y: -h.x },
+        { x: -h.x, y: -h.y }
+    ];
 
-                    const relX = (nx - sX) / gridScale;
-                    const relY = (ny - sY) / gridScale;
-                    const distF = relX * dirX + relY * dirY;
-                    const distB = -distF;
-                    const distS = Math.abs(relX * sideX + relY * sideY);
+    // First legal, unoccupied cell reached from `cell` in heading-preference
+    // order. Returns { gx, gy, step } or null if `cell` is boxed in.
+    const stepFrom = (cell, h) => {
+        for (const step of stepsFor(h)) {
+            const ngx = cell.gx + step.x;
+            const ngy = cell.gy + step.y;
+            if (occupied.has(`${ngx},${ngy}`)) continue;
+            if (canStep(cell.gx, cell.gy, ngx, ngy)) return { gx: ngx, gy: ngy, step };
+        }
+        return null;
+    };
 
-                    if (distB < -0.1) continue;
-
-                    const nC = { x: nx + gridScale/2, y: ny + gridScale / 2 };
-                    const pC = { x: parent.x + gridScale/2, y: parent.y + gridScale / 2 };
-                    const wall = CONFIG.Canvas.polygonBackends.move.testCollision(pC, nC, { type: "move", mode: "any" });
-                    const reg = leaderRegions.length === 0 || leaderRegions.some(r => r.testPoint(nC));
-                    const isLegal = !wall && reg;
-
-                    // SCORE PRIORITIES:
-                    const lanePenalty = (distS <= laneLimit) ? 0 : 5000000;
-                    const rankScore = Math.max(0, Math.floor(distB + 0.5)) * 100000;
-                    // Tail Proximity: prioritize squares touching the end of the line
-                    const tailPenalty = (finalSpots.length - 1 - j) * 1000;
-                    // Cardinal weight is the final tie-breaker
-                    const score = lanePenalty + rankScore + tailPenalty + dir.weight;
-
-                    const candidate = { x: nx, y: ny, score };
-                    if (isLegal) frontier.push(candidate);
-                    else illegalFrontier.push(candidate);
-                }
-            }
-
-            if (frontier.length > 0) {
-                frontier.sort((a, b) => a.score - b.score);
-                bestSpot = frontier[0];
-            } else if (illegalFrontier.length > 0) {
-                // If NO legal spots, pick the best adjacent to the absolute TAIL
-                illegalFrontier.sort((a, b) => a.score - b.score);
-                bestSpot = illegalFrontier[0];
+    // Grow the trail one rank at a time.
+    while (ordered.length < partyActors.length) {
+        // DOUBLE FILE: complete the current rank two-abreast before stepping back.
+        // The partner sits perpendicular to the heading; we only ever add one, so
+        // single file (skipping this) stays strictly one cell wide.
+        if (!isSingleFile && rank.length === 1) {
+            const head = rank[0];
+            const pgx = head.gx + heading.y;       // heading rotated CW
+            const pgy = head.gy + -heading.x;
+            if (!occupied.has(`${pgx},${pgy}`) && canStep(head.gx, head.gy, pgx, pgy)) {
+                place(pgx, pgy);
+                rank.push({ gx: pgx, gy: pgy });
+                if (ordered.length >= partyActors.length) break;
             }
         }
 
-        if (bestSpot) {
-            finalSpots.push(bestSpot);
-            usedKeys.add(`${bestSpot.x},${bestSpot.y}`);
+        // Step back to the next rank. Prefer continuing straight from a rank cell;
+        // try each cell of the current rank so a blocked lane can route via its
+        // open partner before we resort to turning.
+        let next = null;
+        for (const cell of rank) {
+            const straight = { gx: cell.gx + heading.x, gy: cell.gy + heading.y };
+            if (!occupied.has(`${straight.gx},${straight.gy}`) &&
+                canStep(cell.gx, cell.gy, straight.gx, straight.gy)) {
+                next = { ...straight, step: heading };
+                break;
+            }
         }
+        // No straight step from any rank cell -> turn, following the corridor.
+        // Try every rank cell (not just the lead) so a bend reachable only from
+        // the partner lane is taken instead of dead-ending.
+        if (!next) {
+            for (const cell of rank) {
+                next = stepFrom(cell, heading);
+                if (next) break;
+            }
+        }
+        if (!next) break; // dead end
+
+        place(next.gx, next.gy);
+        rank = [{ gx: next.gx, gy: next.gy }];
+        heading = next.step;
     }
 
-    const toCreate = partyActors.slice(0, finalSpots.length).map((actor, i) => {
-        const spot = finalSpots[i];
+    const toCreate = partyActors.slice(0, ordered.length).map((actor, i) => {
+        const cell = ordered[i];
         const data = actor.prototypeToken.toObject();
-        return { ...data, actorId: actor.id, x: spot.x, y: spot.y, hidden: false };
+        return { ...data, actorId: actor.id, x: cell.gx * gridScale, y: cell.gy * gridScale, hidden: false };
     });
 
     await canvas.scene.createEmbeddedDocuments("Token", toCreate);
-    leaderToken.document.delete();
-    ui.notifications.info(`Deployed ${toCreate.length} party characters.`);
+    await leaderToken.document.delete();
+
+    const shortfall = partyActors.length - toCreate.length;
+    if (shortfall > 0) {
+        ui.notifications.warn(`Deployed ${toCreate.length} party characters; ${shortfall} could not fit in the reachable area.`);
+    } else {
+        ui.notifications.info(`Deployed ${toCreate.length} party characters.`);
+    }
 }
