@@ -64,9 +64,8 @@ async function deploy(dirX, dirY, isSingleFile) {
 
     const partyActors = getPartyActors();
 
-    // Facing-axis ("forward") and lateral ("side") unit vectors. The trail
-    // grows BACKWARD (opposite forward) and, in double file, one cell to the side.
-    const fwd = { x: dirX, y: dirY };
+    // The trail grows BACKWARD (opposite the facing direction) and, in double
+    // file, one cell to the "side" (perpendicular).
     const back = { x: -dirX, y: -dirY };
     const side = { x: -dirY, y: dirX };  // 90° CW of forward
 
@@ -128,8 +127,9 @@ async function deploy(dirX, dirY, isSingleFile) {
     let heading = { x: back.x, y: back.y };
 
     // Step candidates from a cell, preference order: straight on the heading,
-    // then either turn, then reverse (a near-impossible last resort). Diagonals
-    // are excluded so the trail can't cut a wall corner.
+    // then either turn, then reverse (rarely used — only to back into a pocket
+    // when nothing else is open). Diagonals are excluded so the trail can't cut
+    // a wall corner.
     const stepsFor = (h) => [
         { x: h.x, y: h.y },
         { x: -h.y, y: h.x },
@@ -177,9 +177,15 @@ async function deploy(dirX, dirY, isSingleFile) {
                 break;
             }
         }
-        // No straight step available from any rank cell -> turn, following the
-        // corridor from the rank's lead cell.
-        if (!next) next = stepFrom(rank[0], heading);
+        // No straight step from any rank cell -> turn, following the corridor.
+        // Try every rank cell (not just the lead) so a bend reachable only from
+        // the partner lane is taken instead of dead-ending.
+        if (!next) {
+            for (const cell of rank) {
+                next = stepFrom(cell, heading);
+                if (next) break;
+            }
+        }
         if (!next) break; // dead end
 
         place(next.gx, next.gy);

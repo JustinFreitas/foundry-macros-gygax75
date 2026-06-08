@@ -234,7 +234,7 @@ describe("Party Sheet Deploy Macro", () => {
         expect(coords).toEqual(['500,500', '600,500', '600,600']);
     });
 
-    test("single file follows an L-bend defined by a region, never crossing the wall", async () => {
+    test("double file in a 1-wide L-corridor degrades to single file around the bend", async () => {
         const leader = {
             document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
             center: { x: 550, y: 550 }
@@ -242,11 +242,9 @@ describe("Party Sheet Deploy Macro", () => {
         global.canvas.tokens.controlled = [leader];
         game.actors.filter.mockReturnValue([actor('a1'), actor('a2'), actor('a3'), actor('a4')]);
 
-        // Corridor region (in grid cells): straight back from the leader two
-        // cells, then it turns east. Single file is normally a straight column,
-        // but the strict lane only excludes off-lane cells from being *filled* —
-        // here the region itself is the corridor, so we use double file to let
-        // the formation actually round the corner.
+        // 1-cell-wide corridor: straight south two cells, then it turns east.
+        // Double file is requested, but the corridor never admits a partner, so
+        // the trail correctly runs single-wide and rounds the corner.
         //   (5,5) leader
         //   (5,6)
         //   (5,7) (6,7) (7,7)   <- the bend runs east
@@ -261,19 +259,54 @@ describe("Party Sheet Deploy Macro", () => {
         await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
 
         const coords = placedCoords();
-        // All four actors are seated...
-        expect(coords).toHaveLength(4);
-        // ...every placed cell lies within the corridor region (nothing leaks
-        // out the side of the bend)...
+        // Exact path order, strictly one wide, rounding the corner.
+        expect(coords).toEqual(['500,500', '500,600', '500,700', '600,700']);
+    });
+
+    test("double file rounds a 2-wide corner via the partner lane (no premature dead-end)", async () => {
+        const leader = {
+            document: { x: 500, y: 500, width: 1, height: 1, delete: jest.fn() },
+            center: { x: 550, y: 550 }
+        };
+        global.canvas.tokens.controlled = [leader];
+        game.actors.filter.mockReturnValue(
+            ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'].map(actor)
+        );
+
+        // A genuinely 2-wide L. Vertical leg (cols 5-6, rows 5-7) turns into a
+        // horizontal leg (cols 7-8, rows 7-8). Facing north, the trail runs south
+        // down the vertical leg; south is then blocked (no row 8 under cols 5-6),
+        // so it must turn EAST around the bend. The eastern turn is only reachable
+        // from (6,7) — the PARTNER cell of the last vertical rank — so this
+        // exercises the corner-via-partner path that a lead-cell-only turn misses.
+        const room = new Set([
+            '5,5', '6,5',
+            '5,6', '6,6',
+            '5,7', '6,7', '7,7', '8,7',
+            '7,8', '8,8'
+        ]);
+        global.canvas.regions.placeables = [{
+            testPoint: (c) => room.has(`${Math.floor(c.x / 100)},${Math.floor(c.y / 100)}`)
+        }];
+
+        eval(macroScript);
+        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
+        await Dialog.mock.calls[0][0].buttons.north.callback(mockHtml);
+
+        const coords = placedCoords();
+        // All eight must be seated within the room — none dropped, none leaked.
+        expect(coords).toHaveLength(8);
         for (const c of coords) {
             const [x, y] = c.split(',').map(Number);
-            expect(corridor.has(`${x / 100},${y / 100}`)).toBe(true);
+            expect(room.has(`${x / 100},${y / 100}`)).toBe(true);
         }
-        // ...and the formation actually rounds the corner: the straight column
-        // (5,5),(5,6),(5,7) is filled and then the bend cell (6,7) is used.
-        expect(coords).toEqual(
-            expect.arrayContaining(['500,500', '500,600', '500,700', '600,700'])
-        );
+        // The first three ranks fill the vertical leg two-abreast...
+        expect(new Set(coords.slice(0, 6))).toEqual(new Set([
+            '500,500', '600,500', '500,600', '600,600', '500,700', '600,700'
+        ]));
+        // ...then the trail rounds the corner east rather than dead-ending,
+        // continuing along the horizontal leg.
+        expect(coords.slice(6)).toEqual(['700,700', '800,700']);
     });
 
     test("double file forms a contiguous two-wide column in open space (serpentine fill)", async () => {
