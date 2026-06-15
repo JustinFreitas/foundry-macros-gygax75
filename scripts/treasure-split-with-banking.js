@@ -2,7 +2,7 @@
  * treasure-split-with-banking.js
  * Analyzed and Refactored
  */
-const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && actor.system.details.class.toLowerCase() !== 'normal human');
+const partyActors = game.actors.filter(actor => actor.type === 'character' && actor.flags.ose?.party === true && actor.system.details.class.toLowerCase() !== 'normal human');
 const formHtml = [];
 
 formHtml.push('<form>');

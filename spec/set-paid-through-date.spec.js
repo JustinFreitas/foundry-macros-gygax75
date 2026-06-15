@@ -126,6 +126,44 @@ describe('set-paid-through-date', () => {
         canvas.tokens.controlled = [{ actor: mockActor }];
         eval(macroScript);
 
-        expect(ui.notifications.error).toHaveBeenCalledWith('Invalid date format.');
+        expect(ui.notifications.error).toHaveBeenCalledWith('Invalid date format. Please enter a date as MM/DD/YYYY.');
+    });
+
+    // Build a Dialog mock that feeds the given date string to the ok callback.
+    const dialogWithDate = (value) => jest.fn((data) => {
+        if (data.buttons.ok && data.buttons.ok.callback) {
+            data.buttons.ok.callback({ find: () => [{ value }] });
+        }
+        return { render: jest.fn() };
+    });
+
+    test('should interpret a 2-digit year as 20xx and normalize to MM/DD/YYYY', async () => {
+        global.Dialog = dialogWithDate('3/4/26');
+        canvas.tokens.controlled = [{ actor: mockActor }];
+        eval(macroScript);
+
+        await new Promise(process.nextTick);
+
+        // Engine-independent: "3/4/26" must become 03/04/2026, never 1926.
+        expect(mockActor.setFlag).toHaveBeenCalledWith('ose', 'paidThroughDate', '03/04/2026');
+    });
+
+    test('should reject an overflow date like 2/30/2025', () => {
+        global.Dialog = dialogWithDate('2/30/2025');
+        canvas.tokens.controlled = [{ actor: mockActor }];
+        eval(macroScript);
+
+        expect(ui.notifications.error).toHaveBeenCalledWith('Invalid date format. Please enter a date as MM/DD/YYYY.');
+        expect(mockActor.setFlag).not.toHaveBeenCalled();
+    });
+
+    test('should pad single-digit month and day', async () => {
+        global.Dialog = dialogWithDate('1/5/2025');
+        canvas.tokens.controlled = [{ actor: mockActor }];
+        eval(macroScript);
+
+        await new Promise(process.nextTick);
+
+        expect(mockActor.setFlag).toHaveBeenCalledWith('ose', 'paidThroughDate', '01/05/2025');
     });
 });

@@ -4,6 +4,30 @@
     A report is sent to the chat with the results.
 */
 
+// Parse a user-entered M/D/YYYY (or M/D/YY) date string explicitly rather than
+// relying on the `Date` constructor, whose handling of non-ISO strings (and
+// especially 2-digit years) is implementation-defined. Two-digit years map to
+// 2000-2099. Returns a Date at local midnight, or null if the string isn't a
+// valid M/D/Y date.
+function parseMDYDate(dateString) {
+    const match = String(dateString).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,4})$/);
+    if (!match) return null;
+
+    const month = parseInt(match[1], 10);
+    const day = parseInt(match[2], 10);
+    let year = parseInt(match[3], 10);
+    if (match[3].length <= 2) year += 2000;
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const date = new Date(year, month - 1, day);
+    // Reject overflow (e.g. 2/30 rolling into March).
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return null;
+    }
+    return date;
+}
+
 const selectedActors = canvas.tokens.controlled.map(token => token.actor);
 
 if (!selectedActors.length) {
@@ -36,9 +60,9 @@ if (!selectedActors.length) {
                         return;
                     }
 
-                    const date = new Date(dateString);
-                    if (isNaN(date.getTime())) {
-                        ui.notifications.error("Invalid date format.");
+                    const date = parseMDYDate(dateString);
+                    if (!date) {
+                        ui.notifications.error("Invalid date format. Please enter a date as MM/DD/YYYY.");
                         return;
                     }
                     const month = String(date.getMonth() + 1).padStart(2, '0');

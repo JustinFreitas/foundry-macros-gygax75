@@ -130,14 +130,16 @@ if (document?.getElementById('sheet-data')) {
                         }
 
                         // *** Upkeep Deduction and Report ***
-                        let bankedGold = characters[i].value;
+                        // Coerce to a number once and validate, so non-numeric or
+                        // negative input can never flow into the bank as NaN.
+                        const bankedGoldInput = Number(characters[i].value);
                         const actorBank = actor.items.getName(BANK_NAME);
 
                         if (actorBank) {
-                            if (bankedGold === undefined || bankedGold === '' || bankedGold <= 0) {
+                            if (!Number.isFinite(bankedGoldInput) || bankedGoldInput <= 0) {
                                 actorLogs.push(`${boldActorName}: No Downtime Cost.</br>`);
                             } else {
-                                bankedGold = Math.ceil(+bankedGold);
+                                const bankedGold = Math.ceil(bankedGoldInput);
                                 const currentGold = Math.ceil(+actorBank.system.quantity.value);
                                 const newGold = Math.ceil(currentGold - bankedGold);
                                 await actorBank.update({system: {quantity: {value: newGold}}});
@@ -163,7 +165,7 @@ if (document?.getElementById('sheet-data')) {
                                     
                                     // Only report if the retainer was NOT already at max HP
                                     if (retainerCurrentHP < retainerMaxHP) {
-                                        actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} rested.</br>`);
+                                        actorLogs.push(`<strong>${retainer.name}</strong> healed to ${retainer.system.hp.value}/${retainer.system.hp.max} because master ${actor.name} healed.</br>`);
                                     }
                                 }
                             }

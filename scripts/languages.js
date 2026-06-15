@@ -16,7 +16,7 @@ if (languageToActorsMap.keys().toArray().length > 0) {
     }
     content = content + collatedResults.join('<br/>');
 } else {
-    content = `${content}<br/>No actors in the party to list languages!`;
+    content = `${content}<br/>No languages spoken by party!`;
 }
 await ChatMessage.create({
     content,

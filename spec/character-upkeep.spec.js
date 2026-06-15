@@ -125,4 +125,106 @@ describe("Character Upkeep Macro", () => {
         expect(messages[0].content).toContain('Cost of living <b>10gp</b>');
         expect(messages[0].content).toContain('Bank balance changed from 100gp to 90gp');
     });
+
+    test("should not corrupt the bank when upkeep input is non-numeric", async () => {
+        // Feed garbage into the upkeep field. Before the fix, "+'abc'" produced NaN
+        // and was written straight into the bank quantity.
+        global.Dialog = jest.fn((dialogData) => {
+            const promise = new Promise(async (resolve) => {
+                const html = {
+                    find: (selector) => {
+                        if (selector === 'input.character') return [{ value: 'abc' }];
+                        if (selector === 'input.heal') return [{ value: '0' }];
+                        return [];
+                    }
+                };
+                await dialogData.buttons.calculate.callback(html);
+                resolve();
+            });
+            const instance = { render: jest.fn(), getPromise: () => promise };
+            global.Dialog.mostRecentInstance = instance;
+            return instance;
+        });
+
+        const bankItem = {
+            name: 'GP (Bank)',
+            type: 'item',
+            system: { quantity: { value: 100 } },
+            update: jest.fn(async function (data) {
+                this.system.quantity.value = data.system.quantity.value;
+                return this;
+            })
+        };
+
+        const actors = [
+            {
+                name: 'Bob (Fighter)',
+                type: 'character',
+                flags: { ose: { party: true } },
+                system: {
+                    hp: { value: 20, max: 20 },
+                    details: { class: 'Fighter' },
+                    retainer: { enabled: false }
+                },
+                items: [bankItem]
+            }
+        ];
+        game.actors.set(actors);
+
+        eval(macroScript);
+        await global.Dialog.mostRecentInstance.getPromise();
+
+        // Bank untouched; NaN never reaches the ledger.
+        expect(bankItem.update).not.toHaveBeenCalled();
+        expect(bankItem.system.quantity.value).toBe(100);
+
+        const messages = ChatMessage.getCreated();
+        expect(messages[0].content).toContain('No Downtime Cost');
+    });
+
+    test("should treat negative upkeep input as No Downtime Cost", async () => {
+        global.Dialog = jest.fn((dialogData) => {
+            const promise = new Promise(async (resolve) => {
+                const html = {
+                    find: (selector) => {
+                        if (selector === 'input.character') return [{ value: '-50' }];
+                        if (selector === 'input.heal') return [{ value: '0' }];
+                        return [];
+                    }
+                };
+                await dialogData.buttons.calculate.callback(html);
+                resolve();
+            });
+            const instance = { render: jest.fn(), getPromise: () => promise };
+            global.Dialog.mostRecentInstance = instance;
+            return instance;
+        });
+
+        const bankItem = {
+            name: 'GP (Bank)',
+            type: 'item',
+            system: { quantity: { value: 100 } },
+            update: jest.fn()
+        };
+
+        game.actors.set([
+            {
+                name: 'Carol (Cleric)',
+                type: 'character',
+                flags: { ose: { party: true } },
+                system: {
+                    hp: { value: 20, max: 20 },
+                    details: { class: 'Cleric' },
+                    retainer: { enabled: false }
+                },
+                items: [bankItem]
+            }
+        ]);
+
+        eval(macroScript);
+        await global.Dialog.mostRecentInstance.getPromise();
+
+        expect(bankItem.update).not.toHaveBeenCalled();
+        expect(ChatMessage.getCreated()[0].content).toContain('No Downtime Cost');
+    });
 });

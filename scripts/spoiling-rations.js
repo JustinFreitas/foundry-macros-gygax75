@@ -1,4 +1,21 @@
 const DAY = 8.64e+7;
+
+// Parse an M/D/YYYY (or M/D/YY) date string into a local-midnight timestamp,
+// avoiding the locale/engine-dependent behaviour of `new Date(str)`. Falls back
+// to `Date.parse` for any other format the calendar might emit. Returns a number
+// (ms) or NaN.
+function parseRationDate(dateString) {
+    const match = String(dateString).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,4})$/);
+    if (match) {
+        const month = parseInt(match[1], 10);
+        const day = parseInt(match[2], 10);
+        let year = parseInt(match[3], 10);
+        if (match[3].length <= 2) year += 2000;
+        return new Date(year, month - 1, day).getTime();
+    }
+    return Date.parse(dateString);
+}
+
 const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true);
 const nameToRationsMap = new Map();
 let ironExpirationDateString;
@@ -29,13 +46,13 @@ for (const actor of partyActors) {
         const foundFreshFood = item.name.match(/rations, fresh food \((?<date>[^)]+)\)/i);
         const foundPreservedMeat = item.name.match(/rations, preserved meat \((?<date>[^)]+)\)/i);
         let newName;
-        if (foundStandard?.groups?.date && new Date(foundStandard.groups.date) > new Date(standardExpirationDateString)) {
+        if (foundStandard?.groups?.date && parseRationDate(foundStandard.groups.date) > parseRationDate(standardExpirationDateString)) {
             newName = `Rations, Standard (${standardExpirationDateString})`;
-        } else if (foundIron?.groups?.date && new Date(foundIron.groups.date) > new Date(ironExpirationDateString)) {
+        } else if (foundIron?.groups?.date && parseRationDate(foundIron.groups.date) > parseRationDate(ironExpirationDateString)) {
             newName = `Rations, Iron (${ironExpirationDateString})`;
-        } else if (foundFreshFood?.groups?.date && new Date(foundFreshFood.groups.date) > new Date(freshFoodExpirationDateString)) {
+        } else if (foundFreshFood?.groups?.date && parseRationDate(foundFreshFood.groups.date) > parseRationDate(freshFoodExpirationDateString)) {
             newName = `Rations, Fresh Food (${freshFoodExpirationDateString})`;
-        } else if (foundPreservedMeat?.groups?.date && new Date(foundPreservedMeat.groups.date) > new Date(preservedMeatExpirationDateString)) {
+        } else if (foundPreservedMeat?.groups?.date && parseRationDate(foundPreservedMeat.groups.date) > parseRationDate(preservedMeatExpirationDateString)) {
             newName = `Rations, Preserved Meat (${preservedMeatExpirationDateString})`;
         }
 

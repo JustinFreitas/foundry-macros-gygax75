@@ -93,4 +93,46 @@ describe('PayPartyRetainersFromDate', () => {
     expect(messageContent).toContain('<h4>Player Character</h4>');
     expect(messageContent).toContain('Paid <strong>Retainer (Hireling) (Player Character)</strong> 90gp for 9 days.');
   });
+
+  test('should write paidThroughDate in MM/DD/YYYY format so it round-trips with set-paid-through-date', async () => {
+    const html = {
+      find: jest.fn(() => [{ value: '1/1/2025' }]),
+    };
+
+    let capturedCallback;
+    global.Dialog = jest.fn().mockImplementation((dialogData) => {
+      capturedCallback = dialogData.buttons.calculate.callback;
+      return { render: jest.fn() };
+    });
+
+    eval(macroScript);
+
+    await capturedCallback(html);
+    await new Promise(process.nextTick);
+
+    // currentDate comes from formatTimestamp -> '1/10/2025'; the stored flag must
+    // be the zero-padded, locale-independent MM/DD/YYYY form, NOT toDateString().
+    const retainer = game.actors.filter(() => true).find(a => a.system.retainer?.enabled);
+    expect(retainer.setFlag).toHaveBeenCalledWith('ose', 'paidThroughDate', '01/10/2025');
+  });
+
+  test('should reject an invalid start date without paying anyone', async () => {
+    const html = {
+      find: jest.fn(() => [{ value: 'not a date' }]),
+    };
+
+    let capturedCallback;
+    global.Dialog = jest.fn().mockImplementation((dialogData) => {
+      capturedCallback = dialogData.buttons.calculate.callback;
+      return { render: jest.fn() };
+    });
+
+    eval(macroScript);
+
+    await capturedCallback(html);
+    await new Promise(process.nextTick);
+
+    expect(ui.notifications.error).toHaveBeenCalledWith('Invalid or ambiguous date format. Please enter a date as MM/DD/YYYY.');
+    expect(ChatMessage.create).not.toHaveBeenCalled();
+  });
 });

@@ -23,6 +23,7 @@ describe('TreasureSplitWithBanking', () => {
         actor1 = {
             id: 'actor1',
             name: 'Actor 1',
+            type: 'character',
             flags: { ose: { party: true } },
             system: { details: { class: 'Fighter' } },
             items: {
@@ -39,6 +40,7 @@ describe('TreasureSplitWithBanking', () => {
         actor2 = {
             id: 'actor2',
             name: 'Actor 2',
+            type: 'character',
             flags: { ose: { party: true } },
             system: { details: { class: 'Thief' } },
             items: {
@@ -178,6 +180,30 @@ describe('TreasureSplitWithBanking', () => {
         // Verify: Notification shown instead of ChatMessage
         expect(ui.notifications.info).toHaveBeenCalledWith("No deposits passed.");
         expect(ChatMessage.create).not.toHaveBeenCalled();
+    });
+
+    test('should exclude non-character actors (no system.details.class) without throwing', () => {
+        // A vehicle/item-pile that happens to carry the ose.party flag but has no
+        // details.class. Before the type guard, `.class.toLowerCase()` threw here.
+        const vehicle = {
+            id: 'vehicle1',
+            name: 'Wagon',
+            type: 'vehicle',
+            flags: { ose: { party: true } },
+            system: {},
+            items: { getName: jest.fn() }
+        };
+        game.actors._data = [actor1, vehicle];
+
+        let capturedActors;
+        global.game.actors.filter = jest.fn(function (fn) {
+            capturedActors = this._data.filter(fn);
+            return capturedActors;
+        });
+
+        expect(() => eval(macroScript)).not.toThrow();
+        // Only the real character survives the filter.
+        expect(capturedActors).toEqual([actor1]);
     });
 
     test('should report when no eligible characters are in the party', async () => {

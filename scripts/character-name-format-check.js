@@ -1,3 +1,10 @@
+// Character Name Format Check (REPORT ONLY)
+// Audits character actor names/classes and logs problems to the console (F12).
+// This is the read-only twin of character-name-validation.js: the class-fix
+// `actor.update(...)` (search "GOING TO UPDATE CLASS") and the summary
+// ChatMessage.create calls are intentionally commented out. Uncomment them to
+// have this macro apply class corrections / post a chat report.
+
 function capitalizeWords(str) {
     return str.split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))

@@ -6,17 +6,19 @@ function isWhiteListedTopLevelItem(item) {
         || item.name.startsWith('Helm')
         || item.name.startsWith('Medallion')
         || item.name.startsWith('Quiver')
+        //|| item.name.startsWith('Ration')
+        || item.name.includes('arrow')
         || item.name.endsWith('Ring')
         || item.name.startsWith('Ring')
         || [
             'Elven Cloak and Boots',
             'GP (Bank)',
             'Holy symbol',
-            'Lantern',
-            'Oil flask',
+            //'Lantern',
+            //'Oil flask',
             'Saddle and Bridle',
             'Scarab of Protection',
-            'Torch',
+            //'Torch',
             'Waterskin'
             ].includes(item.name);
 }
@@ -28,7 +30,7 @@ for (let i = 0; i < partySheetActors.length; i++) {
     const containers = actor.system.containers;
     for (let j = 0; j < containers.length; j++) {
         const container = containers[j];
-        const pattern = /^.*\(\s*(?<capacity>\d+)\s*\)\s*$/gm;
+        const pattern = /^.*\(\s*(?<capacity>\d+)\s*\)\s*$/m;
         const matches = pattern.exec(container.name);
         if (+matches?.groups?.capacity < container.system.totalWeight) {
             const violation = `${container.name}, ${container.system.totalWeight}cns`;

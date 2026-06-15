@@ -81,4 +81,36 @@ describe('container-and-encumbrance-checker.js', () => {
             expect(isWhiteListedTopLevelItem({ name: "Rider's Gear" })).toBe(false); // This item is whitelisted in the other script, but not this one.
         });
     });
+
+    describe('container capacity regex', () => {
+        const fs = require('fs');
+        const path = require('path');
+
+        // Pull the exact regex literal out of the source so this test guards the
+        // real pattern, not a copy. Previously it carried a /g flag, which made
+        // .exec() stateful (lastIndex persisting) and could skip matches when
+        // reused across containers.
+        const source = fs.readFileSync(
+            path.resolve(__dirname, '../scripts/container-and-encumbrance-checker.js'),
+            'utf8'
+        );
+        const regexLiteral = source.match(/\/\^\.\*\\\(.*?\$\/[a-z]*/)[0];
+        const flags = regexLiteral.slice(regexLiteral.lastIndexOf('/') + 1);
+
+        it('does not use the global flag (avoids stateful exec across containers)', () => {
+            expect(flags).not.toContain('g');
+        });
+
+        it('extracts capacity consistently across many sequential containers', () => {
+            // eslint-disable-next-line no-eval
+            const pattern = eval(regexLiteral);
+            const names = ['Backpack (40)', 'Sack (60)', 'Pouch (5)', 'Chest (200)'];
+            const capacities = names.map(name => {
+                const m = pattern.exec(name);
+                return m?.groups?.capacity;
+            });
+            // Every container must match; a leftover lastIndex would yield nulls.
+            expect(capacities).toEqual(['40', '60', '5', '200']);
+        });
+    });
 });

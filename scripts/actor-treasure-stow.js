@@ -1,3 +1,5 @@
+// NOTE: This consolidation logic is duplicated in consolidate-items-in-containers.js
+// (Foundry macros can't share modules). Keep the two in sync if you change either.
 async function consolidateContainer(actor, container) {
     console.log(`Consolidating items in container '${container.name}' for actor '${actor.name}'.`);
     const itemsInContainer = actor.items.filter(item => item.system.containerId === container.id);
@@ -190,7 +192,7 @@ async function stowTreasure(fillToAbsoluteMax) {
 
         const fillableContainers = [];
         for (const container of characterActor.system.containers) {
-            const pattern = /^.*\(\s*(?<capacity>\d+)\s*\)\s*$/gm;
+            const pattern = /^.*\(\s*(?<capacity>\d+)\s*\)\s*$/m;
             const matches = pattern.exec(container.name);
             if (matches) {
                 const capacity = +matches.groups.capacity;

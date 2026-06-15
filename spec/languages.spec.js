@@ -27,7 +27,7 @@ describe('languages', () => {
     const script = `(async () => {${scriptContent}})()`;
     await eval(script);
     expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h4>Party Languages</h4><br/>No actors in the party to list languages!',
+      content: '<h4>Party Languages</h4><br/>No languages spoken by party!',
       whisper: ['test-user'],
     });
   });
@@ -43,7 +43,7 @@ describe('languages', () => {
     const script = `(async () => {${scriptContent}})()`;
     await eval(script);
     expect(global.ChatMessage.create).toHaveBeenCalledWith({
-      content: '<h4>Party Languages</h4><br/>No actors in the party to list languages!',
+      content: '<h4>Party Languages</h4><br/>No languages spoken by party!',
       whisper: ['test-user'],
     });
   });

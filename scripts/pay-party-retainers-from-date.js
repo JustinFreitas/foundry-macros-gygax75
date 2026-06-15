@@ -1,3 +1,33 @@
+// Parse an M/D/YYYY (or M/D/YY) date string explicitly rather than relying on
+// the `Date` constructor, whose handling of non-ISO strings (and especially
+// 2-digit years) is implementation-defined. Two-digit years map to 2000-2099.
+// Returns a Date at local midnight, or null if the string isn't a valid date.
+function parseMDYDate(dateString) {
+    const match = String(dateString).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,4})$/);
+    if (!match) return null;
+
+    const month = parseInt(match[1], 10);
+    const day = parseInt(match[2], 10);
+    let year = parseInt(match[3], 10);
+    if (match[3].length <= 2) year += 2000;
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return null;
+    }
+    return date;
+}
+
+// Format a Date as MM/DD/YYYY so the stored 'paidThroughDate' flag matches the
+// format written by set-paid-through-date.js and is reliably re-parseable.
+function formatMDYDate(date) {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${month}/${day}/${date.getFullYear()}`;
+}
+
 if (document?.getElementById('start-date')) {
     console.log('Date Input Window Already Open');
 } else {
@@ -39,14 +69,14 @@ if (document?.getElementById('start-date')) {
                         return;
                     }
 
-                    const userStartDate = new Date(startDateString);
-                    if (isNaN(userStartDate.getTime())) {
-                        ui.notifications.error("Invalid or ambiguous date format. Please enter a valid date.");
+                    const userStartDate = parseMDYDate(startDateString);
+                    if (!userStartDate) {
+                        ui.notifications.error("Invalid or ambiguous date format. Please enter a date as MM/DD/YYYY.");
                         return;
                     }
 
                     const currentTimestamp = SimpleCalendar.api.timestamp();
-                    const currentDate = new Date(SimpleCalendar.api.formatTimestamp(currentTimestamp, 'MM/DD/YYYY'));
+                    const currentDate = parseMDYDate(SimpleCalendar.api.formatTimestamp(currentTimestamp, 'MM/DD/YYYY'));
 
                     const chatLogs = [];
                     chatLogs.push('<h4>Retainer Payment Report</h4>');
@@ -65,7 +95,8 @@ if (document?.getElementById('start-date')) {
                             const retainerMatch = retainer.name.match(retainerMasterRegex);
                             if (retainerMatch && retainerMatch[2] === baseActorName) {
                                 hasRetainers = true;
-                                const paidThroughDate = retainer.getFlag('ose', 'paidThroughDate') ? new Date(retainer.getFlag('ose', 'paidThroughDate')) : null;
+                                const paidThroughFlag = retainer.getFlag('ose', 'paidThroughDate');
+                                const paidThroughDate = paidThroughFlag ? parseMDYDate(paidThroughFlag) : null;
                                 const startDate = paidThroughDate && paidThroughDate > userStartDate ? paidThroughDate : userStartDate;
 
                                 const timeDiff = currentDate.getTime() - startDate.getTime();
@@ -105,7 +136,7 @@ if (document?.getElementById('start-date')) {
                                             const currentRetainerGold = Math.ceil(+retainerBank.system.quantity.value);
                                             const newRetainerGold = currentRetainerGold + upkeepCost;
                                             await retainerBank.update({ system: { quantity: { value: newRetainerGold } } });
-                                            await retainer.setFlag('ose', 'paidThroughDate', currentDate.toDateString());
+                                            await retainer.setFlag('ose', 'paidThroughDate', formatMDYDate(currentDate));
 
                                             actorLogs.push(`Paid <strong>${retainer.name}</strong> ${upkeepCost}gp for ${dayDiff} days. New balance: ${newRetainerGold}gp.</br>`);
                                         } else {

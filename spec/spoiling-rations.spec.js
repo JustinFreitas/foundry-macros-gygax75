@@ -72,4 +72,27 @@ describe('SpoilingRations', () => {
         expect(messageContent).toContain('<h2>Rations Spoiling Report</h2>');
         expect(messageContent).toContain('<b>Actor 1:</b>  Rations, Standard (1/10/2025)');
     });
+
+    test('should compare 2-digit-year ration dates correctly (20xx, not 19xx)', async () => {
+        // Stored date "1/12/26" must be read as 2026, which is later than the
+        // current date (1/10/2025), so the ration is NOT yet expired further.
+        const actor = {
+            name: 'Actor 1',
+            flags: { ose: { party: true } },
+            items: [
+                { name: 'Rations, Standard (1/12/26)', flags: {}, update: jest.fn() }
+            ]
+        };
+        game.actors.filter.mockReturnValue([actor]);
+
+        await eval(`(async () => { ${macroScript} })()`);
+
+        // 1/12/2026 > 1/10/2025 -> the macro renames it to the current date.
+        // (If "26" were misread as 1926, the comparison would flip and behaviour
+        // would differ by engine — this asserts the deterministic outcome.)
+        expect(actor.items[0].update).toHaveBeenCalledWith({
+            name: 'Rations, Standard (1/10/2025)',
+            flags: { core: { spoiled: true } }
+        });
+    });
 });
