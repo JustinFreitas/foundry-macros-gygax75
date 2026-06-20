@@ -5,6 +5,7 @@ const {
     estimateUnitEnc,
     unitValueDensity,
     compareTreasurePriority,
+    compareFillableContainers,
     consolidateContainer,
     COIN_GP_VALUE,
 } = require('../scripts/lib/treasure-stow-helpers.js');
@@ -259,6 +260,64 @@ describe('actor-treasure-stow.js', () => {
                 const sorted = [...items].sort(compareTreasurePriority).map(i => i.name);
                 expect(sorted).toEqual(["Gem 1000gp", "Gem 100gp", "Gem 10gp", "GP"]);
             });
+        });
+    });
+
+    describe('compareFillableContainers', () => {
+        // entry: { id, capacity, remaining, partiallyFilled, hasNormalItems }
+        const c = (id, {capacity = 100, remaining = capacity, partiallyFilled = false, hasNormalItems = false} = {}) =>
+            ({ id, capacity, remaining, partiallyFilled, hasNormalItems });
+
+        it('puts containers holding normal items last (last resort)', () => {
+            const order = [
+                c("normal", {hasNormalItems: true}),
+                c("treasureOnly", {hasNormalItems: false}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            expect(order).toEqual(["treasureOnly", "normal"]);
+        });
+
+        it('a normal-item container loses even to a smaller empty treasure-only one', () => {
+            const order = [
+                c("normalBig", {capacity: 500, hasNormalItems: true}),
+                c("emptySmall", {capacity: 50, hasNormalItems: false}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            expect(order).toEqual(["emptySmall", "normalBig"]);
+        });
+
+        it('within the non-normal group, partially-filled come before empty', () => {
+            const order = [
+                c("empty", {partiallyFilled: false}),
+                c("partial", {partiallyFilled: true, remaining: 40}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            expect(order).toEqual(["partial", "empty"]);
+        });
+
+        it('partially-filled tiebreak: tightest remaining capacity first', () => {
+            const order = [
+                c("loose", {partiallyFilled: true, remaining: 80}),
+                c("tight", {partiallyFilled: true, remaining: 20}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            expect(order).toEqual(["tight", "loose"]);
+        });
+
+        it('empty tiebreak: smallest capacity first', () => {
+            const order = [
+                c("big", {capacity: 200}),
+                c("small", {capacity: 60}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            expect(order).toEqual(["small", "big"]);
+        });
+
+        it('full ordering across all groups', () => {
+            const order = [
+                c("normalPartial", {partiallyFilled: true, remaining: 10, hasNormalItems: true}),
+                c("emptyBig", {capacity: 300}),
+                c("partialTight", {partiallyFilled: true, remaining: 15}),
+                c("emptySmall", {capacity: 40}),
+                c("partialLoose", {partiallyFilled: true, remaining: 90}),
+            ].sort(compareFillableContainers).map(x => x.id);
+            // partially-filled (tightest first), then empty (smallest first), then normal-item last
+            expect(order).toEqual(["partialTight", "partialLoose", "emptySmall", "emptyBig", "normalPartial"]);
         });
     });
 
