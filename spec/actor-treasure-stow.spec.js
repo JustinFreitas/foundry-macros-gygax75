@@ -1,77 +1,19 @@
 
+const {
+    parseGpFromName,
+    estimateUnitGpValue,
+    estimateUnitEnc,
+    unitValueDensity,
+    compareTreasurePriority,
+    consolidateContainer,
+    COIN_GP_VALUE,
+} = require('../scripts/lib/treasure-stow-helpers.js');
+
 describe('actor-treasure-stow.js', () => {
 
-    // Mocking the global game object and its properties that the script might implicitly rely on
-    // This is a minimal mock to allow the helper functions to be tested.
-    const mockGame = {
-        scenes: {
-            active: {}
-        },
-        itempiles: {
-            API: {
-                transferItems: jest.fn()
-            }
-        }
-    };
-
-    const mockUi = {
-        notifications: {
-            warn: jest.fn(),
-            info: jest.fn()
-        }
-    };
-
-    const mockChatMessage = {
-        create: jest.fn(),
-        getWhisperRecipients: jest.fn(() => [])
-    };
-
-    const mockHooks = {
-        on: jest.fn()
-    };
-
-    const mockDialog = jest.fn(() => ({
-        render: jest.fn()
-    }));
-
-    // Mocking global functions/objects
-    global.game = mockGame;
-    global.ui = mockUi;
-    global.ChatMessage = mockChatMessage;
-    global.Hooks = mockHooks;
-    global.Dialog = mockDialog;
-    global.foundry = {
-        utils: {
-            randomID: jest.fn(() => "mockID")
-        },
-        applications: {
-            api: {
-                DialogV2: {
-                    wait: jest.fn()
-                }
-            }
-        }
-    };
-    global.randomID = jest.fn(() => "mockID_legacy");
-    global.canvas = {
-        tokens: {
-            controlled: []
-        }
-    };
-    // Mocking global functions/objects
-    global.game = mockGame;
-    global.ui = mockUi;
-    global.ChatMessage = mockChatMessage;
-    global.Hooks = mockHooks;
-    global.Dialog = mockDialog;
-
-    global.canvas = {
-        tokens: {
-            controlled: []
-        }
-    };
-
-    // Helper functions extracted from the original script for testing
+    // These helpers (getCapacityLimit, getAvailableCapacity, getClassPrecedence)
+    // are closures inside stowTreasure() and can't be imported, so they are
+    // mirrored here. The shared, importable helpers below are tested directly.
     const getCapacityLimit = (actor, fillToAbsoluteMax) => {
         const isFloatingDisc = actor.system.details.class.includes("Floating Disc");
         const isMule = actor.system.details.class.includes("Mule");
@@ -94,34 +36,6 @@ describe('actor-treasure-stow.js', () => {
         return classPrecedence.length;
     };
 
-    async function consolidateContainer(actor, container) {
-        console.log(`Consolidating items in container '${container.name}' for actor '${actor.name}'.`);
-        const itemsInContainer = actor.items.filter(item => item.system.containerId === container.id);
-        if (itemsInContainer.length === 0) return;
-    
-        const itemsByName = itemsInContainer.reduce((acc, item) => {
-            if (!acc[item.name]) {
-                acc[item.name] = [];
-            }
-            acc[item.name].push(item);
-            return acc;
-        }, {});
-    
-        for (const name in itemsByName) {
-            const items = itemsByName[name];
-            if (items.length > 1) {
-                const firstItem = items[0];
-                const totalQuantity = items.reduce((sum, item) => sum + item.system.quantity.value, 0);
-    
-                await actor.updateEmbeddedDocuments("Item", [{ _id: firstItem.id, "system.quantity.value": totalQuantity }]);
-    
-                const idsToDelete = items.slice(1).map(item => item.id);
-                await actor.deleteEmbeddedDocuments("Item", idsToDelete);
-            }
-        }
-    }
-
-    // Test for getClassPrecedence
     describe('getClassPrecedence', () => {
         it('should return correct precedence for "Floating Disc"', () => {
             expect(getClassPrecedence("Floating Disc")).toBe(0);
@@ -145,19 +59,14 @@ describe('actor-treasure-stow.js', () => {
         });
     });
 
-    // Test for getCapacityLimit and getAvailableCapacity
     describe('Encumbrance calculations', () => {
-
-        // Helper to create a mock actor
         const createMockActor = (className, maxEncumbrance, currentEncumbrance, encumbranceSteps) => ({
             system: {
-                details: {
-                    class: className
-                },
+                details: { class: className },
                 encumbrance: {
                     max: maxEncumbrance,
                     value: currentEncumbrance,
-                    steps: encumbranceSteps || [0, 50, 100] // Default steps
+                    steps: encumbranceSteps || [0, 50, 100]
                 }
             }
         });
@@ -182,182 +91,254 @@ describe('actor-treasure-stow.js', () => {
 
             it('should return calculated capacity for other classes when fillToAbsoluteMax is false', () => {
                 const actor = createMockActor("Fighter", 100, 0, [0, 50, 100]);
-                expect(getCapacityLimit(actor, false)).toBe(100); // 100 * (100/100)
+                expect(getCapacityLimit(actor, false)).toBe(100);
             });
 
             it('should return calculated capacity for other classes with different steps when fillToAbsoluteMax is false', () => {
                 const actor = createMockActor("Fighter", 100, 0, [0, 25, 50]);
-                expect(getCapacityLimit(actor, false)).toBe(50); // 100 * (50/100)
+                expect(getCapacityLimit(actor, false)).toBe(50);
             });
         });
 
         describe('getAvailableCapacity', () => {
             it('should return remaining capacity for a normal actor', () => {
                 const actor = createMockActor("Fighter", 100, 20, [0, 50, 100]);
-                expect(getAvailableCapacity(actor, false)).toBe(80); // 100 - 20
+                expect(getAvailableCapacity(actor, false)).toBe(80);
             });
 
             it('should return remaining capacity for a Floating Disc', () => {
                 const actor = createMockActor("Floating Disc", 100, 20);
-                expect(getAvailableCapacity(actor, false)).toBe(80); // Max is 100, current is 20
+                expect(getAvailableCapacity(actor, false)).toBe(80);
             });
 
-            it('should return 0 if current encumbrance exceeds capacity limit', () => {
+            it('should return negative when current encumbrance exceeds capacity limit', () => {
                 const actor = createMockActor("Fighter", 100, 120, [0, 50, 100]);
-                expect(getAvailableCapacity(actor, false)).toBe(-20); // 100 - 120
+                expect(getAvailableCapacity(actor, false)).toBe(-20);
+            });
+        });
+    });
+
+    describe('value density', () => {
+        describe('parseGpFromName', () => {
+            it('reads an explicit gp value out of the name', () => {
+                expect(parseGpFromName("Gem 1000gp")).toBe(1000);
+                expect(parseGpFromName("Gem 100gp")).toBe(100);
+                expect(parseGpFromName("Jewelry (500 gp)")).toBe(500);
+                expect(parseGpFromName("Ruby 5,000 GP")).toBe(5000);
+            });
+
+            it('returns null when no value is stated', () => {
+                expect(parseGpFromName("Gem")).toBeNull();
+                expect(parseGpFromName("Silver Comb")).toBeNull();
+                expect(parseGpFromName(undefined)).toBeNull();
+            });
+        });
+
+        describe('estimateUnitEnc', () => {
+            it('uses RC encumbrances: gems/coins 1 cn, jewelry ~25 cn', () => {
+                expect(estimateUnitEnc("Gem 1000gp")).toBe(1);
+                expect(estimateUnitEnc("GP")).toBe(1);
+                expect(estimateUnitEnc("Jewelry")).toBe(25);
+            });
+
+            it('returns null for unrecognized names', () => {
+                expect(estimateUnitEnc("Mysterious Idol")).toBeNull();
+            });
+        });
+
+        describe('estimateUnitGpValue', () => {
+            it('ranks coins by canonical gp value', () => {
+                expect(estimateUnitGpValue("PP")).toBe(COIN_GP_VALUE.PP);
+                expect(estimateUnitGpValue("GP")).toBe(1);
+                expect(estimateUnitGpValue("EP")).toBe(0.5);
+                expect(estimateUnitGpValue("SP")).toBe(0.1);
+                expect(estimateUnitGpValue("CP")).toBe(0.01);
+            });
+
+            it('values gems and jewelry above coins', () => {
+                expect(estimateUnitGpValue("Gem")).toBeGreaterThan(estimateUnitGpValue("PP"));
+                expect(estimateUnitGpValue("Jewelry")).toBeGreaterThan(estimateUnitGpValue("Gem"));
+            });
+
+            it('matches plural and prefixed names', () => {
+                expect(estimateUnitGpValue("Gems")).toBe(estimateUnitGpValue("Gem"));
+            });
+
+            it('reads an explicit "NNN gp" value out of a name ahead of coin codes', () => {
+                // "Gem 1000gp" must value as 1000, not the generic gem average.
+                expect(estimateUnitGpValue("Gem 1000gp")).toBe(1000);
+                // A bare coin item is named just its code; value is the per-coin gp.
+                expect(estimateUnitGpValue("GP")).toBe(1);
+            });
+
+            it('does not match GP inside PP and vice versa', () => {
+                expect(estimateUnitGpValue("PP")).toBe(5);
+            });
+
+            it('returns null for unrecognized names', () => {
+                expect(estimateUnitGpValue("Mysterious Idol")).toBeNull();
+                expect(estimateUnitGpValue("")).toBeNull();
+                expect(estimateUnitGpValue(undefined)).toBeNull();
+            });
+        });
+
+        describe('unitValueDensity', () => {
+            it('is gp per unit weight (name-based fallback)', () => {
+                expect(unitValueDensity("Gem", 1)).toBe(100);
+                expect(unitValueDensity("GP", 2)).toBe(0.5);
+            });
+
+            it('treats weightless valued items as their raw gp value', () => {
+                expect(unitValueDensity("Gem", 0)).toBe(100);
+            });
+
+            it('returns 0 for unknown value', () => {
+                expect(unitValueDensity("Mysterious Idol", 5)).toBe(0);
+            });
+
+            it('prefers the OSE system.cost price when present', () => {
+                // Idol has no name signal, but a real cost of 5000gp at weight 10 = 500/cns.
+                expect(unitValueDensity("Mysterious Idol", 10, 5000)).toBe(500);
+            });
+
+            it('cost overrides the name-based estimate', () => {
+                // A "Gem" appraised at only 5gp should use the real cost, not 100.
+                expect(unitValueDensity("Gem", 1, 5)).toBe(5);
+            });
+
+            it('falls back to name estimate when cost is zero/missing', () => {
+                expect(unitValueDensity("Gem", 1, 0)).toBe(100);
+                expect(unitValueDensity("Gem", 1, undefined)).toBe(100);
+            });
+        });
+
+        describe('compareTreasurePriority', () => {
+            const t = (name, weight) => ({ name, weight, isTreasure: true });
+
+            it('orders by value density, highest first', () => {
+                const items = [t("CP", 1), t("Gem", 1), t("GP", 1), t("PP", 1)];
+                const sorted = [...items].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["Gem", "PP", "GP", "CP"]);
+            });
+
+            it('accounts for weight when ranking density', () => {
+                // 1 PP (5gp) at weight 1 = density 5; 10 GP-each? Here a heavy gem loses to light platinum.
+                const heavyGem = t("Gem", 200); // 100/200 = 0.5
+                const platinum = t("PP", 1);     // 5/1 = 5
+                const sorted = [heavyGem, platinum].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["PP", "Gem"]);
+            });
+
+            it('always places mundane equipment after treasure', () => {
+                const equipment = { name: "Rope", weight: 1, isTreasure: false };
+                const cheapTreasure = t("CP", 1);
+                const sorted = [equipment, cheapTreasure].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["CP", "Rope"]);
+            });
+
+            it('breaks ties by name', () => {
+                const sorted = [t("Gem (Ruby)", 1), t("Gem (Emerald)", 1)].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["Gem (Emerald)", "Gem (Ruby)"]);
+            });
+
+            it('uses real cost to rank an otherwise-unnamed valuable above coins', () => {
+                const idol = { name: "Idol", weight: 5, cost: 5000, isTreasure: true }; // 1000/cns
+                const platinum = t("PP", 1); // 5/cns
+                const sorted = [platinum, idol].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["Idol", "PP"]);
+            });
+
+            it('ranks named-value gems correctly even with no cost field (world data)', () => {
+                // Matches the real world items: "Gem NNNNgp" at weight 1, no cost.
+                const items = [
+                    { name: "GP", weight: 1, isTreasure: true },
+                    { name: "Gem 1000gp", weight: 1, isTreasure: true },
+                    { name: "Gem 10gp", weight: 1, isTreasure: true },
+                    { name: "Gem 100gp", weight: 1, isTreasure: true },
+                ];
+                const sorted = [...items].sort(compareTreasurePriority).map(i => i.name);
+                expect(sorted).toEqual(["Gem 1000gp", "Gem 100gp", "Gem 10gp", "GP"]);
             });
         });
     });
 
     describe('consolidateContainer', () => {
-        it('should consolidate duplicate items within a container', async () => {
-            const mockContainer = {
-                id: "container1",
-                name: "Backpack (100)",
-                system: { totalWeight: 0 }
-            };
-
-            const mockItem1 = {
-                id: "item1",
-                name: "Rope",
-                system: { quantity: { value: 1 }, containerId: "container1" }
-            };
-            const mockItem2 = {
-                id: "item2",
-                name: "Rope",
-                system: { quantity: { value: 1 }, containerId: "container1" }
-            };
-            const mockItem3 = {
-                id: "item3",
-                name: "Torch",
-                system: { quantity: { value: 2 }, containerId: "container1" }
-            };
-
-            const mockActor = {
+        const makeActor = (items) => {
+            const actor = {
                 name: "Test Actor",
-                items: [
-                    mockContainer,
-                    mockItem1,
-                    mockItem2,
-                    mockItem3
-                ],
+                items,
                 updateEmbeddedDocuments: jest.fn(),
                 deleteEmbeddedDocuments: jest.fn(),
             };
+            actor.items.get = jest.fn((id) => actor.items.find(item => item.id === id));
+            return actor;
+        };
 
-            // Mock the actor.items.get method for the consolidateContainer function
-            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
+        const item = (id, name, qty, weight, containerId = "container1") => ({
+            id, name,
+            system: { quantity: { value: qty }, weight, containerId }
+        });
 
-            await consolidateContainer(mockActor, mockContainer);
+        const container = { id: "container1", name: "Backpack (100)", system: { totalWeight: 0 } };
 
-            // Expect updateEmbeddedDocuments to be called for the first item with combined quantity
-            expect(mockActor.updateEmbeddedDocuments).toHaveBeenCalledWith(
+        it('consolidates duplicate same-name same-weight items', async () => {
+            const actor = makeActor([
+                container,
+                item("item1", "Rope", 1, 5),
+                item("item2", "Rope", 1, 5),
+                item("item3", "Torch", 2, 1),
+            ]);
+
+            const result = await consolidateContainer(actor, container);
+
+            expect(result).toBe(true);
+            expect(actor.updateEmbeddedDocuments).toHaveBeenCalledWith(
                 "Item",
                 [{ _id: "item1", "system.quantity.value": 2 }]
             );
-
-            // Expect deleteEmbeddedDocuments to be called for the duplicate item
-            expect(mockActor.deleteEmbeddedDocuments).toHaveBeenCalledWith(
-                "Item",
-                ["item2"]
-            );
-
-            // Ensure Torch is not affected as it's not a duplicate
-            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalledWith(
-                "Item",
-                [{ _id: "item3", "system.quantity.value": expect.any(Number) }]
-            );
+            expect(actor.deleteEmbeddedDocuments).toHaveBeenCalledWith("Item", ["item2"]);
         });
 
-        it('should not consolidate if no duplicate items exist', async () => {
-            const mockContainer = {
-                id: "container1",
-                name: "Backpack (100)",
-                system: { totalWeight: 0 }
-            };
+        it('does NOT merge same-name items of different weight (value preserved)', async () => {
+            const actor = makeActor([
+                container,
+                item("g1", "Gem", 1, 1),
+                item("g2", "Gem", 1, 3),
+            ]);
 
-            const mockItem1 = {
-                id: "item1",
-                name: "Rope",
-                system: { quantity: { value: 1 }, containerId: "container1" }
-            };
-            const mockItem3 = {
-                id: "item3",
-                name: "Torch",
-                system: { quantity: { value: 2 }, containerId: "container1" }
-            };
+            const result = await consolidateContainer(actor, container);
 
-            const mockActor = {
-                name: "Test Actor",
-                items: [
-                    mockContainer,
-                    mockItem1,
-                    mockItem3
-                ],
-                updateEmbeddedDocuments: jest.fn(),
-                deleteEmbeddedDocuments: jest.fn(),
-            };
-
-            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
-
-            await consolidateContainer(mockActor, mockContainer);
-
-            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalled();
-            expect(mockActor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+            expect(actor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
         });
 
-        it('should not consolidate items not in the specified container', async () => {
-            const mockContainer = {
-                id: "container1",
-                name: "Backpack (100)",
-                system: { totalWeight: 0 }
-            };
+        it('returns false and does nothing when there are no duplicates', async () => {
+            const actor = makeActor([
+                container,
+                item("item1", "Rope", 1, 5),
+                item("item3", "Torch", 2, 1),
+            ]);
 
-            const mockItem1 = {
-                id: "item1",
-                name: "Rope",
-                system: { quantity: { value: 1 }, containerId: "container1" }
-            };
-            const mockItem2 = {
-                id: "item2",
-                name: "Rope",
-                system: { quantity: { value: 1 }, containerId: "container2" } // Different container
-            };
+            const result = await consolidateContainer(actor, container);
 
-            const mockActor = {
-                name: "Test Actor",
-                items: [
-                    mockContainer,
-                    mockItem1,
-                    mockItem2
-                ],
-                updateEmbeddedDocuments: jest.fn(),
-                deleteEmbeddedDocuments: jest.fn(),
-            };
-
-            mockActor.items.get = jest.fn((id) => mockActor.items.find(item => item.id === id));
-
-            await consolidateContainer(mockActor, mockContainer);
-
-            expect(mockActor.updateEmbeddedDocuments).not.toHaveBeenCalled();
-            expect(mockActor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
-        });
-    });
-    
-    describe('randomID compatibility', () => {
-        it('should use foundry.utils.randomID if available', () => {
-            const result = (foundry.utils?.randomID ?? randomID)();
-            expect(result).toBe("mockID");
+            expect(result).toBe(false);
+            expect(actor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
         });
 
-        it('should fallback to global randomID if foundry.utils.randomID is missing', () => {
-            const originalRandomID = foundry.utils.randomID;
-            foundry.utils.randomID = undefined;
-            
-            const result = (foundry.utils?.randomID ?? randomID)();
-            expect(result).toBe("mockID_legacy");
-            
-            foundry.utils.randomID = originalRandomID;
+        it('ignores items in other containers', async () => {
+            const actor = makeActor([
+                container,
+                item("item1", "Rope", 1, 5, "container1"),
+                item("item2", "Rope", 1, 5, "container2"),
+            ]);
+
+            const result = await consolidateContainer(actor, container);
+
+            expect(result).toBe(false);
+            expect(actor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
         });
     });
 });
