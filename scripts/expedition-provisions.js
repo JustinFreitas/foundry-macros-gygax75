@@ -4,52 +4,57 @@
 const currentSceneName = game.canvas.scene.name.toLowerCase();
 const isExpeditionScene = currentSceneName.includes('expedition');
 
-let forceSize = 0;
-let forceMembers = []; // New array to store member names
+// We track TWO consumer counts (RAW alignment):
+//  - rationForce: who eats carried RATIONS = PCs + retainers only. Mercenaries are
+//    excluded because their wages already include food (OSE Mercenary Forces RAW).
+//  - waterForce:  who drinks carried WATER  = PCs + retainers + mercenaries. In the
+//    desert the party must supply water for hirelings (water is not part of the wage).
+//  Pack/mount animals (wagon/mule/horse/camel) and item piles are excluded from both.
+let rationForce = 0;
+let waterForce = 0;
+let forceMembers = [];          // ration-eaters (PCs + retainers), shown in the roster
+let waterMembers = [];          // water-drinkers (PCs + retainers + mercenaries)
 const EXCLUSION_WORDS = ['wagon', 'mule', 'horse', 'camel'];
 
 if (isExpeditionScene) {
     const allTokens = canvas.tokens.placeables;
 
-    const processedTokens = allTokens.flatMap(token => {
+    for (const token of allTokens) {
         const actor = token.actor;
-        if (!actor) return [];
-
-        if (actor.type === 'pile') return [];
+        if (!actor) continue;
+        if (actor.type === 'pile') continue;
 
         const actorNameLower = actor.name.toLowerCase();
         const actorClass = actor.system.details?.class?.toLowerCase() || '';
 
-        // Check for MERCENARY GROUP COUNT
+        // MERCENARIES: drink water but do NOT eat carried rations (wages include food).
         if (actorClass.includes('mercenary')) {
             const match = actor.name.match(/\((?<count>\d+)\)/);
             const count = match?.groups?.count ? parseInt(match.groups.count) : 1;
             if (count > 0) {
-                // Add mercenary group name for clarity
                 const baseName = actor.name.replace(/\(\d+\)/, '').trim();
                 for (let i = 1; i <= count; i++) {
-                    forceMembers.push(`${baseName} #${i} (Mercenary)`);
+                    waterMembers.push(`${baseName} #${i} (Mercenary)`);
                 }
-                return Array(count).fill(1);
+                waterForce += count;
             }
-            return [];
+            continue;
         }
-        
-        // Check for EXCLUSION WORDS (Wagon/Mule/Horse)
+
+        // Pack/mount animals: consume neither carried rations nor carried water here.
         const classExclusions = EXCLUSION_WORDS.some(word => actorClass.includes(word));
-        const nameOrTypeExclusions = EXCLUSION_WORDS.some(word => 
-            actorNameLower.includes(word) || 
+        const nameOrTypeExclusions = EXCLUSION_WORDS.some(word =>
+            actorNameLower.includes(word) ||
             actor.type.toLowerCase().includes(word)
         );
+        if (classExclusions || nameOrTypeExclusions) continue;
 
-        if (classExclusions || nameOrTypeExclusions) return [];
-        
-        // Count and record individual token name
+        // PCs / retainers / other individuals: eat rations AND drink water.
         forceMembers.push(actor.name);
-        return [1];
-    });
-
-    forceSize = processedTokens.length;
+        waterMembers.push(actor.name);
+        rationForce += 1;
+        waterForce += 1;
+    }
 }
 
 // --- ITEM SEPARATION, SORTING, AND CALCULATION UTILITIES ---
@@ -124,15 +129,21 @@ for (const item of consumableItems) {
     }
 }
 
-const totalDaysOfRations = forceSize > 0 ? Math.floor(totalRations / forceSize) : "N/A";
-const totalDaysOfWater = forceSize > 0 ? Math.floor(totalWaterUnits / forceSize) : "N/A";
+const totalDaysOfRations = rationForce > 0 ? Math.floor(totalRations / rationForce) : "N/A";
+const totalDaysOfWater = waterForce > 0 ? Math.floor(totalWaterUnits / waterForce) : "N/A";
 
 const rationColor = getDaysColor(totalDaysOfRations);
 const waterColor = getDaysColor(totalDaysOfWater);
 
 // FIXED: Force List HTML applies max-height/overflow to the inner list container for stable resizing.
-const forceListHtml = forceMembers.length > 0 
-    ? `<div style="max-height: 100px; overflow-y: auto; padding-left: 10px;"><ul style="list-style-type: none; margin: 0; padding: 0; font-size: 0.9em;">${forceMembers.map(name => `<li>- ${name}</li>`).join('')}</ul></div>`
+// Water-only members (mercenaries) are tagged so it's clear they consume water but not rations.
+const mercWaterMembers = waterMembers.filter(n => !forceMembers.includes(n));
+const rosterEntries = [
+    ...forceMembers.map(name => `<li>- ${name}</li>`),
+    ...mercWaterMembers.map(name => `<li>- ${name} <em>(water only)</em></li>`)
+];
+const forceListHtml = rosterEntries.length > 0
+    ? `<div style="max-height: 100px; overflow-y: auto; padding-left: 10px;"><ul style="list-style-type: none; margin: 0; padding: 0; font-size: 0.9em;">${rosterEntries.join('')}</ul></div>`
     : `<p style="padding-left: 10px; font-size: 0.9em;">No eligible members found on this scene.</p>`;
 
 // --- 2. CHAT CARD GENERATION FUNCTION ---
@@ -146,7 +157,9 @@ const forceListHtml = forceMembers.length > 0
  */
 async function generateChatCard(unitsFed, totalRationRequested, totalWaterRequested, updates, logMessages) {
     
-    const fullyFedByForaging = forceSize > 0 && unitsFed >= forceSize;
+    // Foraging covers both food and water need; "fully fed" means it covers the largest
+    // consumer group (water-drinkers), which implies rations are covered too.
+    const fullyFedByForaging = waterForce > 0 && unitsFed >= waterForce;
 
     // Only update if there are actual changes (avoid unnecessary DB writes)
     if (updates.length > 0) {
@@ -179,9 +192,9 @@ async function generateChatCard(unitsFed, totalRationRequested, totalWaterReques
         }
     }
     
-    // DAYS REMAINING CALCULATION
-    const daysOfRationsLeft = forceSize > 0 ? Math.floor(finalRations / forceSize) : "N/A";
-    const daysOfWaterLeft = forceSize > 0 ? Math.floor(finalWaterUnits / forceSize) : "N/A";
+    // DAYS REMAINING CALCULATION (rations vs the eaters, water vs the drinkers)
+    const daysOfRationsLeft = rationForce > 0 ? Math.floor(finalRations / rationForce) : "N/A";
+    const daysOfWaterLeft = waterForce > 0 ? Math.floor(finalWaterUnits / waterForce) : "N/A";
 
     
     // ----------------------------------------------------------------
@@ -190,14 +203,14 @@ async function generateChatCard(unitsFed, totalRationRequested, totalWaterReques
     const LOW_STOCK_THRESHOLD = 3;
     const DARK_AMBER = '#cc9900'; 
     
-    const isRationSufficient = finalRations >= forceSize;
-    const isWaterSufficient = finalWaterUnits >= forceSize;
+    const isRationSufficient = finalRations >= rationForce;
+    const isWaterSufficient = finalWaterUnits >= waterForce;
 
     const isRationLow = (daysOfRationsLeft !== "N/A" && daysOfRationsLeft <= LOW_STOCK_THRESHOLD && daysOfRationsLeft > 0);
     const isWaterLow = (daysOfWaterLeft !== "N/A" && daysOfWaterLeft <= LOW_STOCK_THRESHOLD && daysOfWaterLeft > 0);
-    
-    const isRationCritical = finalRations < forceSize;
-    const isWaterCritical = finalWaterUnits < forceSize;
+
+    const isRationCritical = finalRations < rationForce;
+    const isWaterCritical = finalWaterUnits < waterForce;
 
     let headerColor = 'green';
     let headerText = 'Resources Updated: Force Sustained';
@@ -206,15 +219,16 @@ async function generateChatCard(unitsFed, totalRationRequested, totalWaterReques
     if (isRationCritical || isWaterCritical) {
         headerColor = 'red';
         
-        // Check if force was ACTUALLY NOT sustained (i.e., less than 1 unit per member supplied from all sources)
-        if (totalRationRequested + unitsFed < forceSize || totalWaterRequested + unitsFed < forceSize) {
+        // Check if force was ACTUALLY NOT sustained (less than 1 unit per member supplied from all sources).
+        // Rations are measured against the eaters (PCs+retainers); water against the drinkers (+mercenaries).
+        if (totalRationRequested + unitsFed < rationForce || totalWaterRequested + unitsFed < waterForce) {
             headerText = 'Resources Updated:<br>Force Not Sustained';
             const rationsSupplied = totalRationRequested + unitsFed;
             const waterSupplied = totalWaterRequested + unitsFed;
 
             forceNotSustainedDetails = `
-                <p style="font-weight: bold; color: #cc0000; margin-left: 5px;">Rations Supplied: ${rationsSupplied} (Force size: ${forceSize})</p>
-                <p style="font-weight: bold; color: #cc0000; margin-left: 5px;">Water Supplied: ${waterSupplied} (Force size: ${forceSize})</p>
+                <p style="font-weight: bold; color: #cc0000; margin-left: 5px;">Rations Supplied: ${rationsSupplied} (Eaters: ${rationForce})</p>
+                <p style="font-weight: bold; color: #cc0000; margin-left: 5px;">Water Supplied: ${waterSupplied} (Drinkers: ${waterForce})</p>
                 <hr style="margin: 5px 0;">
             `;
         } else {
@@ -254,10 +268,10 @@ async function generateChatCard(unitsFed, totalRationRequested, totalWaterReques
     // Build the final chat card HTML
     let chatContent = `<div style="border: 2px solid ${headerColor}; padding: 5px; border-radius: 5px;">
         <h3 style="color: black; background-color: ${headerColor}; padding: 3px; margin: -5px -5px 5px -5px; text-align: center; font-weight: bold;">${headerText}</h3>
-        <p style="font-weight: bold; margin-bottom: 5px;">Force Size: ${forceSize}</p>
+        <p style="font-weight: bold; margin-bottom: 5px;">Force Size: ${waterForce} (Eaters: ${rationForce} &middot; Water: ${waterForce})</p>
         <hr style="margin: 5px 0;">
-        
-        ${forceNotSustainedDetails} 
+
+        ${forceNotSustainedDetails}
 
         ${logMessages.length > 0 ? `
         <details style="margin-bottom: 5px;">
@@ -296,9 +310,9 @@ function openConsumptionDialog(unitsFed) {
     
     // --- 3a. CALCULATE DEFAULT CONSUMPTION BASED ON FORAGING ---
     
-    // Start with the full consumption need (1 unit per force member)
-    let rationsNeededForDefault = forceSize; 
-    let waterUnitsNeededForDefault = forceSize; 
+    // Start with the full consumption need: 1 ration per eater, 1 water unit per drinker.
+    let rationsNeededForDefault = rationForce;
+    let waterUnitsNeededForDefault = waterForce;
 
     if (unitsFed > 0) {
         // Reduce both RATION and WATER need by the number of units fed by foraging.
@@ -312,8 +326,8 @@ function openConsumptionDialog(unitsFed) {
 
     let consumptionNotice = '';
     if (unitsFed > 0) {
-        // Calculate the percentage fed based on force size
-        const percentFed = forceSize > 0 ? Math.round((unitsFed / forceSize) * 100) : 0;
+        // Calculate the percentage fed based on the water force (largest consumer group)
+        const percentFed = waterForce > 0 ? Math.round((unitsFed / waterForce) * 100) : 0;
         
         // Note formatting: black text, 'Note' bolded
         consumptionNotice = `<p style="color: black; margin-bottom: 5px;"><b>Note</b>: Force needs for Rations and Water reduced by ${unitsFed}. (${percentFed}% fed by foraging)</p>`;
@@ -321,7 +335,7 @@ function openConsumptionDialog(unitsFed) {
 
     let content = `
         <form>
-            <p style="font-weight: bold; margin-bottom: 5px;">Force Size: <span style="color: #ff6400; font-weight: bold;">${forceSize}</span></p>
+            <p style="font-weight: bold; margin-bottom: 5px;">Force Size: <span style="color: #ff6400; font-weight: bold;">${waterForce}</span> <span style="font-weight: normal; font-size: 0.9em;">(Eaters: ${rationForce} &middot; Water: ${waterForce})</span></p>
 
             <div style="margin-top: 5px; border-left: 4px solid #7a7971; padding-left: 8px;">
                 <p style="margin: 0; font-weight: bold;">Rations Remaining: <span style="color: ${rationColor};">${totalDaysOfRations} Days</span> (Total: ${totalRations})</p>
@@ -458,7 +472,7 @@ function openConsumptionDialog(unitsFed) {
                     
                     const totalConsumedUnits = totalRationRequested + totalWaterRequested;
 
-                    const fullyFedByForaging = forceSize > 0 && unitsFed >= forceSize;
+                    const fullyFedByForaging = waterForce > 0 && unitsFed >= waterForce;
                     if (totalConsumedUnits === 0 && updates.length === 0 && !fullyFedByForaging) {
                         ui.notifications.info("No items were consumed.");
                         return;
@@ -506,7 +520,7 @@ const preCheckContent = `
     <form>
         <details style="border-bottom: 2px solid #7a7971; margin-top: 0;">
             <summary style="font-weight: bold; cursor: pointer; padding-bottom: 5px;">
-                Current Force Size: <span style="color: #ff6400; font-weight: bold;">${forceSize}</span> (Click to view members)
+                Current Force Size: <span style="color: #ff6400; font-weight: bold;">${waterForce}</span> (Eaters: ${rationForce} &middot; Water: ${waterForce}) (Click to view members)
             </summary>
             ${forceListHtml}
         </details>
@@ -534,12 +548,12 @@ new Dialog({
                 // Get the selected percentage value (0.0 to 1.0)
                 const selectedValue = parseFloat(html.find('input[name="percent_fed"]:checked').val());
                 
-                // Calculate units fed (always rounding down)
-                const unitsFed = Math.floor(forceSize * selectedValue);
-                
+                // Calculate units fed (always rounding down), based on the water force (largest group)
+                const unitsFed = Math.floor(waterForce * selectedValue);
+
                 // --- NEW SKIP LOGIC ---
                 // If the force is 100% fed by foraging, skip the consumption dialog and go straight to the card.
-                if (forceSize > 0 && unitsFed >= forceSize) {
+                if (waterForce > 0 && unitsFed >= waterForce) {
                     // unitsFed > 0, requests = 0, updates = [], logMessages = []
                     generateChatCard(unitsFed, 0, 0, [], []);
                     return;
