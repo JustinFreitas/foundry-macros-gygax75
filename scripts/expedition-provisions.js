@@ -6,7 +6,7 @@ const isExpeditionScene = currentSceneName.includes('expedition');
 
 let forceSize = 0;
 let forceMembers = []; // New array to store member names
-const EXCLUSION_WORDS = ['wagon', 'mule', 'horse'];
+const EXCLUSION_WORDS = ['wagon', 'mule', 'horse', 'camel'];
 
 if (isExpeditionScene) {
     const allTokens = canvas.tokens.placeables;
