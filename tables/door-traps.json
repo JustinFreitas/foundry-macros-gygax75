@@ -1,0 +1,508 @@
+{
+  "name": "Door Traps (d20)",
+  "_id": "zzbNpr3Xgj345Vsw",
+  "img": "icons/svg/trap.svg",
+  "description": "<p>Roll when a dungeon door is found to be <strong>trapped</strong>. Each result lists the effect and a way to circumvent it. Listen, search, and open suspect doors from the side with a 10-ft pole where possible; Find/Remove Traps disarms a found trap. Adjust dice and saves to your system.</p>",
+  "results": [
+    {
+      "_id": "98yeWuNDPrUSK3Ys",
+      "type": "text",
+      "text": "<strong>Poisoned needle.</strong> A needle in the lock or handle pricks the opener — save vs. poison or suffer its effect (DM's poison: damage, sleep, or weakness). <em>Circumvent:</em> Spike/jam the lock; open with tools or a gloved hand, never bare skin; Remove Traps.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        1,
+        1
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "DLvBHgdOJzRqlLhd",
+      "type": "text",
+      "text": "<strong>Falling block.</strong> A stone block drops in the doorway as it opens — save vs. paralysis (or Dexterity) or take 2d6 damage. <em>Circumvent:</em> Search to spot the seam; brace/wedge the block; trigger it from the side with a pole.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        2,
+        2
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "3Uy0p6vG4VqNh0Yw",
+      "type": "text",
+      "text": "<strong>Alarm (gong or bell).</strong> Opening rings a hidden bell or gong — make a wandering-monster check, and anything nearby is alerted. <em>Circumvent:</em> Spot and muffle the wire/clapper; oil the hinges; pick the lock quietly and ease the door.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        3,
+        3
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "sLprgqjNrMK1xHFQ",
+      "type": "text",
+      "text": "<strong>Pit beneath the threshold.</strong> The floor in the doorway drops as the door swings — fall 10 ft (1d6) or more. <em>Circumvent:</em> Tap the floor ahead with a pole; open the door and step back; lay a plank across.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        4,
+        4
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "yCG66bkh6zx7f0GO",
+      "type": "text",
+      "text": "<strong>Gas jet (sleep or poison).</strong> A jet of gas vents from the frame — save vs. poison or fall asleep / be sickened. <em>Circumvent:</em> Hold your breath and back away; detect and plug the nozzle; pull the door open from a distance with a rope.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        5,
+        5
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "BNFa3EwTRWcW4Pbz",
+      "type": "text",
+      "text": "<strong>Dart trap.</strong> Darts fire from ports in the frame — 1d4 each, a save halves the number that hit. <em>Circumvent:</em> Search for and jam the ports; stand to the side while opening; pull the door with a hook.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        6,
+        6
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "EdkxVXigpIjIdSZN",
+      "type": "text",
+      "text": "<strong>Scything blade.</strong> A blade sweeps across the doorway — 1d8 damage to anyone in the gap. <em>Circumvent:</em> Spot the slot it rides in; trip it with a pole first, then pass; or time the swing.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        7,
+        7
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "nxDzyFs0esJflu8N",
+      "type": "text",
+      "text": "<strong>Shock handle.</strong> The handle is charged — touching it deals 1d6 and a save or you drop what you're holding. <em>Circumvent:</em> Wear an insulated glove; open with a pole or rope; douse/ground the handle first.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        8,
+        8
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "0EyZm6Zo8TANTWqW",
+      "type": "text",
+      "text": "<strong>Flame jet.</strong> A gout of fire erupts on opening — 2d6 damage, save for half. <em>Circumvent:</em> Open from the side with a rope; detect and block the nozzle; soak yourself/your gear first.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        9,
+        9
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "z7oJtf5PCTiGnTHc",
+      "type": "text",
+      "text": "<strong>Spring-loaded crossbow.</strong> A concealed crossbow fires a bolt at whoever opens the door — 1d8 damage. <em>Circumvent:</em> Open from the side, out of the line of fire; find the low trip-wire and trip it with a pole.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        10,
+        10
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "b7A7Yg4yGd8FViFQ",
+      "type": "text",
+      "text": "<strong>Delayed ceiling collapse.</strong> A grinding rumble, then the ceiling at the threshold caves in after 1 round — heavy damage to anyone beneath. <em>Circumvent:</em> Heed the warning sound and clear the doorway at once; brace the frame; don't linger to loot.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        11,
+        11
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "I1qyQPJiLpKZSspE",
+      "type": "text",
+      "text": "<strong>Magical glyph / rune.</strong> A glowing sigil on the door discharges when touched (fear, shock, or damage per the DM). <em>Circumvent:</em> Read Magic to identify it; scratch out or cover the rune; Dispel Magic; open without touching the warded panel.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        12,
+        12
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "Z7XUl6bNLm1i5zL5",
+      "type": "text",
+      "text": "<strong>Portcullis drop.</strong> An iron grate slams down — behind the lead character, splitting the party. <em>Circumvent:</em> Spot the slot in the ceiling above; jam it with a spear or spike; move the whole party through quickly together.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        13,
+        13
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "FTkL5zPCEcCIc29C",
+      "type": "text",
+      "text": "<strong>Acid spray.</strong> A corrosive jet sprays the opener — damage plus a piece of armor or gear is ruined. <em>Circumvent:</em> Open from a distance with a rope; raise a shield; detect and plug the nozzle.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        14,
+        14
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "SPVfnZDuMYPXlCRv",
+      "type": "text",
+      "text": "<strong>False \"stuck\" door.</strong> The \"stuck\" door is solid and immovable; the real catch is elsewhere. Time and effort wasted force a wandering-monster check. <em>Circumvent:</em> Search for the true catch or a hidden door nearby; don't waste rounds brute-forcing it.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        15,
+        15
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "5yVlssHAOoYByG34",
+      "type": "text",
+      "text": "<strong>Glue / seizing lock.</strong> An adhesive or seizing mechanism binds the opener's hand or tools fast to the handle. <em>Circumvent:</em> Use a tool, not a bare hand; apply solvent or oil; cut yourself free (and lose the tool).",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        16,
+        16
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "aahk9H7P2UiEen93",
+      "type": "text",
+      "text": "<strong>Spiked threshold.</strong> Hidden spikes thrust up from the floor as you step through — damage to feet/legs. <em>Circumvent:</em> Tap the floor first with a pole; step well over the threshold; heavy boots or a board help.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        17,
+        17
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "aFzi2Wv52wHhP1ki",
+      "type": "text",
+      "text": "<strong>Net / snare.</strong> A weighted net or snare drops on the opener, entangling them for a round or two. <em>Circumvent:</em> Spot the seam or trigger overhead; set it off from the side; cut free quickly.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        18,
+        18
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "zeLvxFMikQxnQu84",
+      "type": "text",
+      "text": "<strong>Symbol of summoning.</strong> Opening the door rings or flares a sigil that summons a guardian creature. <em>Circumvent:</em> Detect and disable the sigil; Dispel Magic; or simply be ready for a fight before you open it.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        19,
+        19
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    },
+    {
+      "_id": "OggKmfX6AAjNpbUc",
+      "type": "text",
+      "text": "<strong>Teleport / one-way door.</strong> Crossing the threshold shunts the opener elsewhere — another room, a cell, or back the way they came. <em>Circumvent:</em> Detect the dweomer first; rope the party together so one person can be pulled back; scout it with Detect Magic before stepping through.",
+      "img": "icons/svg/trap.svg",
+      "weight": 1,
+      "range": [
+        20,
+        20
+      ],
+      "drawn": false,
+      "flags": {},
+      "_stats": {
+        "coreVersion": "14.363",
+        "systemId": "old-school-essentials",
+        "systemVersion": "2.6.0",
+        "createdTime": 1782245032141,
+        "modifiedTime": 1782245032141,
+        "lastModifiedBy": null,
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "exportSource": null
+      }
+    }
+  ],
+  "formula": "1d20",
+  "replacement": true,
+  "displayRoll": true,
+  "folder": null,
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "coreVersion": "14.363",
+    "systemId": "old-school-essentials",
+    "systemVersion": "2.6.0",
+    "createdTime": 1782245032141,
+    "modifiedTime": 1782245032141,
+    "lastModifiedBy": null,
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null
+  }
+}
