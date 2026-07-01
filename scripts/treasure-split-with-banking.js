@@ -24,6 +24,8 @@ async function dialogWaitShim({ title, content, buttons, defaultButton, ...optio
 
   if (DialogV2) {
     return await DialogV2.wait({
+      classes: ["dialog"],
+      position: { width: 400, height: "auto" },
       window: { title, ...options.window },
       content: content,
       buttons: Object.entries(buttons).map(([id, btn]) => ({
@@ -94,4 +96,4 @@ dialogWaitShim({
         close: { label: "Close" }
     },
     defaultButton: "calculate"
-});
+});
