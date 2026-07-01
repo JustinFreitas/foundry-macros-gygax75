@@ -43,7 +43,7 @@ if (partyActors.length === 0) {
     `;
 
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         window: { title: "Set Marching Order" },
         content: content,
         buttons: [
@@ -69,9 +69,12 @@ if (partyActors.length === 0) {
                 icon: '<i class="fas fa-times"></i>',
                 label: "Cancel"
             }
-        ],
-        render: (event, target) => {
-            const html = [target];
+        ]
+    });
+    
+    dialog.addEventListener("render", (event) => {
+        const target = event.target.element;
+        const html = [target];
             const list = html[0].querySelector("#mo-list");
             if (!list) return;
 
@@ -111,6 +114,7 @@ if (partyActors.length === 0) {
                 list.insertBefore(dragging, after ? over.nextSibling : over);
                 renumber();
             });
-        }
     });
+    
+    dialog.render(true);
 }

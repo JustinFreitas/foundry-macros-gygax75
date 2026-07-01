@@ -759,17 +759,24 @@ if (pcsInParty.length === 0) {
     let state = {};
 
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         window: { title: "B/X Hired Help & Carousing Tracker" },
-        content: formHtml,
+        position: { width: 600, height: "auto" },
+        content: (() => {
+            const div = document.createElement("div");
+            div.innerHTML = formHtml;
+            return div;
+        })(),
         buttons: [
             {
                 action: "close",
                 label: "Close Recruitment"
             }
-        ],
-        render: async (event, target) => {
-            const html = $(target);
+        ]
+    });
+    dialog.addEventListener("render", async (event) => {
+        const target = event.target.element;
+        const html = $(target);
             // Setup selections
             initializePCSelect(html, pcsInParty);
             
@@ -1317,8 +1324,8 @@ if (pcsInParty.length === 0) {
                 
                 await refreshUI(html, activePC, state);
             });
-        }
     });
+    dialog.render(true);
 }
 
 const CLASS_HIT_DIE = {
