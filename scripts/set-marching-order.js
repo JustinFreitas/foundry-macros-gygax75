@@ -28,13 +28,13 @@ if (partyActors.length === 0) {
         .mo-list { list-style: none; margin: 0; padding: 0; }
         .mo-row {
             display: flex; align-items: center; gap: 8px;
-            padding: 6px 8px; margin-bottom: 4px;
-            border: 1px solid var(--color-border-light-tertiary, #999);
-            border-radius: 4px; background: rgba(0,0,0,0.05); cursor: grab;
+            padding: 8px; margin-bottom: 6px;
+            border: 1px solid var(--color-border-light-tertiary, rgba(255, 255, 255, 0.2));
+            border-radius: 4px; background: rgba(255,255,255,0.05); cursor: grab;
         }
         .mo-row.mo-dragging { opacity: 0.4; }
-        .mo-row.mo-over { border-color: #ff6400; border-style: dashed; }
-        .mo-grip { opacity: 0.5; }
+        .mo-row.mo-over { border-color: #ff6400; border-style: dashed; background: rgba(255, 100, 0, 0.1); }
+        .mo-grip { opacity: 0.5; margin-right: 4px; }
         .mo-rank { width: 1.5em; text-align: right; font-weight: bold; }
         .mo-name { flex: 1; }
     </style>
@@ -44,7 +44,9 @@ if (partyActors.length === 0) {
 
     const { DialogV2 } = foundry.applications.api;
     const dialog = new DialogV2({
-        window: { title: "Set Marching Order" },
+        window: { title: "Set Marching Order", icon: "fas fa-users" },
+        position: { width: 400, height: "auto" },
+        classes: ["dialog"],
         content: content,
         buttons: [
             {
