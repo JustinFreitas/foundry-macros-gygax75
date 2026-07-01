@@ -107,9 +107,11 @@ describe('CarouseForHiredHelp', () => {
         };
 
         Dialog = jest.fn().mockImplementation((dialogData) => {
+            dialogData = dialogData || {};
             capturedRender = dialogData.render;
             return {
-                render: jest.fn()
+                render: jest.fn(),
+                addEventListener: jest.fn((event, cb) => { if (event === 'render') { capturedRender = cb; } })
             };
         });
 
@@ -119,7 +121,8 @@ describe('CarouseForHiredHelp', () => {
         global.ui = ui;
         global.SimpleCalendar = SimpleCalendar;
         global.Actor = Actor;
-        global.foundry = { applications: { api: { DialogV2: { wait: jest.fn() } } } };
+        global.foundry = { applications: { api: { DialogV2: Dialog } } };
+        global.foundry.applications.api.DialogV2.wait = Dialog;
         global.Dialog = Dialog;
         global.foundry.applications.api.DialogV2.wait = Dialog;
 
@@ -190,7 +193,7 @@ describe('CarouseForHiredHelp', () => {
         eval(macroScript);
 
         expect(global.foundry.applications.api.DialogV2.wait).toHaveBeenCalled();
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         // Verify HTML element search was performed for pc-stats-display
         expect(mockHtml.find).toHaveBeenCalledWith('#pc-stats-display');
@@ -209,7 +212,7 @@ describe('CarouseForHiredHelp', () => {
         game.actors.filter = jest.fn(callback => [playerActor, retainerActor].filter(callback));
 
         eval(macroScript);
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         // Verify pc stats refresh was triggered
         expect(mockHtml.find).toHaveBeenCalledWith('#pc-stats-display');
@@ -217,7 +220,7 @@ describe('CarouseForHiredHelp', () => {
 
     test('should roll Tavern available Normal Humans', async () => {
         eval(macroScript);
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         const clickHandler = handlers['#roll-tavern-btn'];
         expect(clickHandler).toBeDefined();
@@ -237,7 +240,7 @@ describe('CarouseForHiredHelp', () => {
 
     test('should deduct gold and roll carousing candidates', async () => {
         eval(macroScript);
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         const clickHandler = handlers['#carouse-btn'];
         expect(clickHandler).toBeDefined();
@@ -269,7 +272,7 @@ describe('CarouseForHiredHelp', () => {
 
     test('should post advertisements and deduct 25gp', async () => {
         eval(macroScript);
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         const clickHandler = handlers['#post-advert-btn'];
         expect(clickHandler).toBeDefined();
@@ -290,7 +293,7 @@ describe('CarouseForHiredHelp', () => {
 
     test('should roll negotiation and hire candidate', async () => {
         eval(macroScript);
-        await capturedRender(null, mockHtml);
+        await capturedRender({ target: { element: mockHtml } });
 
         // Populate a candidate
         const state = playerActor.flags.ose.recruitmentState;

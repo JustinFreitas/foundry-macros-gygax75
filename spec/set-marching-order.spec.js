@@ -1,4 +1,4 @@
-global.foundry = { applications: { api: { DialogV2: {} } } };
+
 const fs = require('fs');
 const path = require('path');
 
@@ -18,10 +18,19 @@ global.ui = {
     }
 };
 
-global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function (dialogData) {
-    this.render = jest.fn();
+
+let capturedRender;
+global.foundry = { applications: { api: { DialogV2: jest.fn(function(dialogData) {
     this.data = dialogData;
-});
+    this.render = jest.fn();
+    this.addEventListener = jest.fn((event, cb) => {
+        if (event === 'render') {
+            capturedRender = cb;
+        }
+    });
+}) } } };
+global.Dialog = global.foundry.applications.api.DialogV2;
+
 
 // Render the dialog's HTML string into a real (jsdom) container and return a
 // jQuery-ish wrapper where wrapper[0] is that container, matching how the macro
@@ -73,7 +82,7 @@ describe("Set Marching Order Macro", () => {
         const dialog = Dialog.mock.calls[0][0];
         const html = mountDialogContent(dialog.content);
         if(html[0] && !html[0].querySelector) html[0].querySelector = sel => { const el = html.find(sel); return el && el.length ? el[0] : null; };
-dialog.render(null, html[0]);
+capturedRender({ target: { element: html[0] } });
 
         const ranks = [...html[0].querySelectorAll(".mo-rank")].map(s => s.textContent);
         expect(ranks).toEqual(['1.', '2.']);
