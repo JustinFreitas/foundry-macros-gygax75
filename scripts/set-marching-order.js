@@ -16,11 +16,11 @@ if (partyActors.length === 0) {
     });
 
     const rows = sortedActors.map(actor => `
-        <li class="mo-row" draggable="true" data-actor-id="${actor.id}">
+        <div class="mo-row" draggable="true" data-actor-id="${actor.id}">
             <i class="fas fa-grip-vertical mo-grip"></i>
             <span class="mo-rank"></span>
             <span class="mo-name">${actor.name}</span>
-        </li>
+        </div>
     `).join("");
 
     const content = `
@@ -39,7 +39,7 @@ if (partyActors.length === 0) {
         .mo-name { flex: 1; }
     </style>
     <p>Drag the characters into marching order (top = first to deploy).</p>
-    <ol class="mo-list" id="mo-list">${rows}</ol>
+    <div class="mo-list" id="mo-list">${rows}</div>
     `;
 
     const { DialogV2 } = foundry.applications.api;
@@ -90,7 +90,11 @@ if (partyActors.length === 0) {
 
             list.addEventListener("dragstart", (e) => {
                 dragging = e.target.closest(".mo-row");
-                if (dragging) dragging.classList.add("mo-dragging");
+                if (dragging) {
+                    dragging.classList.add("mo-dragging");
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", dragging.dataset.actorId);
+                }
             });
 
             list.addEventListener("dragend", () => {
