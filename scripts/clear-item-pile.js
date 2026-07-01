@@ -15,13 +15,15 @@ if (itemPiles.length === 0) {
     return;
 }
 
-new Dialog({
-    title: "Clear Item Piles",
+const { DialogV2 } = foundry.applications.api;
+DialogV2.wait({
+    window: { title: "Clear Item Piles" },
     content: `<p>Are you sure you want to clear all items from ${itemPiles.length} selected Item Pile(s)? This action cannot be undone.</p>`,
-    buttons: {
-        yes: {
+    buttons: [
+        {
+            action: "yes",
             label: "Clear Piles",
-            callback: async () => {
+            callback: async (event, button, dialog) => {
                 let clearedCount = 0;
                 for (const token of itemPiles) {
                     const actor = token.actor;
@@ -35,9 +37,10 @@ new Dialog({
                 ui.notifications.info(`Cleared items from ${clearedCount} Item Pile(s).`);
             }
         },
-        no: {
-            label: "Cancel"
+        {
+            action: "no",
+            label: "Cancel",
+            default: true
         }
-    },
-    default: "no"
-}).render(true);
+    ]
+});

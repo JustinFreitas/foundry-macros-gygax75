@@ -8,13 +8,15 @@ if (partyMembers.length === 0) {
     return;
 }
 
-new Dialog({
-    title: "Clear Party Sheet",
+const { DialogV2 } = foundry.applications.api;
+DialogV2.wait({
+    window: { title: "Clear Party Sheet" },
     content: `<p>Are you sure you want to remove all ${partyMembers.length} actors from the party sheet?</p>`,
-    buttons: {
-        yes: {
+    buttons: [
+        {
+            action: "yes",
             label: "Clear Party",
-            callback: async () => {
+            callback: async (event, button, dialog) => {
                 let count = 0;
                 for (const actor of partyMembers) {
                     await actor.setFlag("ose", "party", false);
@@ -25,9 +27,10 @@ new Dialog({
                 Hooks.call("OSE.Party.showSheet");
             }
         },
-        no: {
-            label: "Cancel"
+        {
+            action: "no",
+            label: "Cancel",
+            default: true
         }
-    },
-    default: "no"
-}).render(true);
+    ]
+});

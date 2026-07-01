@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 const fs = require('fs');
 const { extractRegion, sourceRegion, TARGETS } = require('../scripts/lib/sync-shared.js');
 

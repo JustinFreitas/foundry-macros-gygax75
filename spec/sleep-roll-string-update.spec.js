@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 describe("sleep-roll-string-update", () => {
   let mockItems;
   let mockUpdate;

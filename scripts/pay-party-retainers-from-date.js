@@ -55,13 +55,17 @@ if (document?.getElementById('start-date')) {
     const pcsInParty = partyActors.filter(actor => !actor.system.retainer?.enabled);
     const retainersInGame = game.actors.filter(actor => actor.type === 'character' && actor.system.retainer?.enabled && actor.system.details?.class !== 'Mule');
     
-    new Dialog({
-        title: "Pay All PC Retainers From Date",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Pay All PC Retainers From Date" },
         content: formHtml.join('\n'),
-        buttons: {
-            calculate: {
+        buttons: [
+            {
+                action: "calculate",
                 label: "Pay Retainers",
-                callback: async (html) => {
+                default: true,
+                callback: async (event, button, dialog) => {
+                    const html = $(dialog.element);
                     const BANK_NAME = 'GP (Bank)';
                     const startDateString = html.find('#start-date')[0].value;
                     if (!startDateString) {
@@ -163,11 +167,11 @@ if (document?.getElementById('start-date')) {
                     });
                 }
             },
-            close: {
+            {
+                action: "close",
                 label: "Close"
             }
-        },
-        default: "calculate"
-    }).render(true);
+        ]
+    });
 }
 

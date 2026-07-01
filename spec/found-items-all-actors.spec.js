@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 
 describe('found-items-all-actors.js', () => {
     let mockGame;

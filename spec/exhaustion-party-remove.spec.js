@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 describe('exhaustion-party-remove.js', () => {
     let mockGame;
     let mockCONFIG;

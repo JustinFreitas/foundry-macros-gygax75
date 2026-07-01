@@ -1,3 +1,4 @@
+global.foundry = { applications: { api: { DialogV2: {} } } };
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +18,7 @@ global.ui = {
     }
 };
 
-global.Dialog = jest.fn(function (dialogData) {
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function (dialogData) {
     this.render = jest.fn();
     this.data = dialogData;
 });
@@ -71,7 +72,8 @@ describe("Set Marching Order Macro", () => {
 
         const dialog = Dialog.mock.calls[0][0];
         const html = mountDialogContent(dialog.content);
-        dialog.render(html);
+        if(html[0] && !html[0].querySelector) html[0].querySelector = sel => { const el = html.find(sel); return el && el.length ? el[0] : null; };
+dialog.render(null, html[0]);
 
         const ranks = [...html[0].querySelectorAll(".mo-rank")].map(s => s.textContent);
         expect(ranks).toEqual(['1.', '2.']);
@@ -93,7 +95,7 @@ describe("Set Marching Order Macro", () => {
         const row3 = list.querySelector('[data-actor-id="a3"]');
         list.insertBefore(row3, list.firstChild);
 
-        await dialog.buttons.save.callback(html);
+        await dialog.buttons.find(b => b.action === 'save').callback(null, null, { element: html[0] });
 
         expect(a3.setFlag).toHaveBeenCalledWith("ose", "marchingOrder", 1);
         expect(a1.setFlag).toHaveBeenCalledWith("ose", "marchingOrder", 2);
@@ -111,7 +113,7 @@ describe("Set Marching Order Macro", () => {
         eval(macroScript);
         const dialog = Dialog.mock.calls[0][0];
         const html = mountDialogContent(dialog.content);
-        await dialog.buttons.save.callback(html);
+        await dialog.buttons.find(b => b.action === 'save').callback(null, null, { element: html[0] });
 
         const assigned = made.map(a => a.setFlag.mock.calls[0][2]).sort((x, y) => x - y);
         expect(assigned).toEqual([1, 2, 3, 4]);

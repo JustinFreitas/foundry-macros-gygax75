@@ -52,7 +52,9 @@ global.ChatMessage = {
     })
 };
 
-global.Dialog = jest.fn((dialogData) => {
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
     const promise = new Promise(async (resolve, reject) => {
         const html = {
             find: (selector) => {
@@ -65,7 +67,7 @@ global.Dialog = jest.fn((dialogData) => {
                 return [];
             }
         };
-        await dialogData.buttons.calculate.callback(html);
+        await dialogData.buttons.find(b => b.action === "calculate").callback(null, null, { element: html });
         resolve();
     });
     const instance = {
@@ -129,7 +131,9 @@ describe("Character Upkeep Macro", () => {
     test("should not corrupt the bank when upkeep input is non-numeric", async () => {
         // Feed garbage into the upkeep field. Before the fix, "+'abc'" produced NaN
         // and was written straight into the bank quantity.
-        global.Dialog = jest.fn((dialogData) => {
+        global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
             const promise = new Promise(async (resolve) => {
                 const html = {
                     find: (selector) => {
@@ -138,7 +142,7 @@ describe("Character Upkeep Macro", () => {
                         return [];
                     }
                 };
-                await dialogData.buttons.calculate.callback(html);
+                await dialogData.buttons.find(b => b.action === "calculate").callback(null, null, { element: html });
                 resolve();
             });
             const instance = { render: jest.fn(), getPromise: () => promise };
@@ -183,7 +187,9 @@ describe("Character Upkeep Macro", () => {
     });
 
     test("should treat negative upkeep input as No Downtime Cost", async () => {
-        global.Dialog = jest.fn((dialogData) => {
+        global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
             const promise = new Promise(async (resolve) => {
                 const html = {
                     find: (selector) => {
@@ -192,7 +198,7 @@ describe("Character Upkeep Macro", () => {
                         return [];
                     }
                 };
-                await dialogData.buttons.calculate.callback(html);
+                await dialogData.buttons.find(b => b.action === "calculate").callback(null, null, { element: html });
                 resolve();
             });
             const instance = { render: jest.fn(), getPromise: () => promise };

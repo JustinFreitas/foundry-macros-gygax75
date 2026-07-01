@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 
 const {
     parseGpFromName,

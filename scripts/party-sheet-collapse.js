@@ -25,8 +25,9 @@ if (!partyActor) {
     if (memberTokens.length === 0) {
         ui.notifications.warn("No party-character tokens were found on this scene to collapse.");
     } else {
-        new Dialog({
-            title: "Collapse Party",
+        const { DialogV2 } = foundry.applications.api;
+        DialogV2.wait({
+            window: { title: "Collapse Party" },
             content: `
                 <p style='text-align:center;'>Which direction is the party facing?</p>
                 <div class="form-group" style="display:flex; align-items:center; margin-bottom:10px;">
@@ -37,14 +38,13 @@ if (!partyActor) {
                     </select>
                 </div>
             `,
-            buttons: {
-                north: { label: "North", callback: (html) => collapse(0, -1, html) },
-                east:  { label: "East",  callback: (html) => collapse(1, 0,  html) },
-                south: { label: "South", callback: (html) => collapse(0, 1,  html) },
-                west:  { label: "West",  callback: (html) => collapse(-1, 0, html) }
-            },
-            default: "north"
-        }).render(true);
+            buttons: [
+                { action: "north", label: "North", default: true, callback: (event, button, dialog) => collapse(0, -1, $(dialog.element)) },
+                { action: "east",  label: "East",  callback: (event, button, dialog) => collapse(1, 0,  $(dialog.element)) },
+                { action: "south", label: "South", callback: (event, button, dialog) => collapse(0, 1,  $(dialog.element)) },
+                { action: "west",  label: "West",  callback: (event, button, dialog) => collapse(-1, 0, $(dialog.element)) }
+            ]
+        });
 
         async function collapse(dirX, dirY, html) {
             const size = parseInt(html.find('[name="size"]')[0].value) || 1;

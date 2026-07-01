@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 describe('found-items-party-actors-and-mounts.js', () => {
     let mockGame;
     let mockChatMessage;

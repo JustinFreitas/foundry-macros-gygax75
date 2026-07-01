@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 
 describe('container-and-encumbrance-checker-with-mounts.js', () => {
 

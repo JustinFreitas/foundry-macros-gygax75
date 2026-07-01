@@ -1,10 +1,12 @@
-new Dialog({
-    title: "Delete Found Items",
+const { DialogV2 } = foundry.applications.api;
+DialogV2.wait({
+    window: { title: "Delete Found Items" },
     content: "<p>Are you sure you want to delete found items for all non-item pile actors? This action cannot be undone.</p>",
-    buttons: {
-        yes: {
+    buttons: [
+        {
+            action: "yes",
             label: "Yes, delete them",
-            callback: async () => {
+            callback: async (event, button, dialog) => {
                 const nonItemPilesActors = canvas.tokens.controlled
                     .map(token => token.actor)
                     .filter(actor => actor && !actor.flags["item-piles"]?.data?.enabled);
@@ -33,9 +35,10 @@ new Dialog({
                 }
             }
         },
-        no: {
-            label: "No, cancel"
+        {
+            action: "no",
+            label: "No, cancel",
+            default: true
         }
-    },
-    default: "no"
-}).render(true);
+    ]
+});

@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 
 describe('expired-ration-removal-all.js', () => {
     let mockGame;

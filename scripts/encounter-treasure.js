@@ -192,25 +192,26 @@ function haulToHtml(haul) {
 // Prompt for the dungeon level (default 1), returning an integer or null if cancelled.
 async function promptLevel() {
     return await new Promise((resolve) => {
-        new Dialog({
-            title: "Encounter Treasure",
+        const { DialogV2 } = foundry.applications.api;
+        DialogV2.wait({
+            window: { title: "Encounter Treasure" },
             content: `<p>Dungeon level for this drop:</p>
                 <input type="number" min="1" step="1" value="1" style="width:100%"
                        id="enc-treasure-level" autofocus/>`,
-            buttons: {
-                roll: {
+            buttons: [
+                {
+                    action: "roll",
                     label: "Roll Loot",
-                    callback: (html) => {
-                        const el = (html instanceof jQuery ? html[0] : html)
-                            .querySelector("#enc-treasure-level");
+                    default: true,
+                    callback: (event, button, dialog) => {
+                        const el = dialog.element.querySelector("#enc-treasure-level");
                         const n = Math.max(1, Math.floor(Number(el?.value)) || 1);
                         resolve(n);
                     }
                 },
-                cancel: { label: "Cancel", callback: () => resolve(null) }
-            },
-            default: "roll"
-        }).render(true);
+                { action: "cancel", label: "Cancel", callback: () => resolve(null) }
+            ]
+        });
     });
 }
 

@@ -24,7 +24,9 @@ global.game = {
 
 global.ui = { notifications: { warn: jest.fn(), info: jest.fn() } };
 
-global.Dialog = jest.fn(function (dialogData) {
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function (dialogData) {
     this.render = jest.fn();
     this.data = dialogData;
 });
@@ -59,7 +61,7 @@ function setup(charActors, tokens) {
 // Run a chosen direction button with a chosen size ("1" or "2").
 async function run(direction, size) {
     const html = { find: jest.fn().mockReturnValue([{ value: size }]) };
-    await Dialog.mock.calls[0][0].buttons[direction].callback(html);
+    await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === direction).callback(null, null, { element: html });
 }
 
 function createdToken() {

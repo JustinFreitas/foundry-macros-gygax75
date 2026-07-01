@@ -26,8 +26,9 @@ if (!leaderToken) {
 } else if (getPartyActors().length === 0) {
     ui.notifications.warn("No characters found in the OSE Party Sheet!");
 } else {
-    new Dialog({
-        title: "Marching Formation",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Marching Formation" },
         content: `
             <p style='text-align:center;'>Which direction is the party facing?</p>
             <div class="form-group" style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -35,14 +36,13 @@ if (!leaderToken) {
                 <input type="checkbox" name="singleFile" style="flex: 0 0 20px;">
             </div>
         `,
-        buttons: {
-            north: { label: "North", callback: (html) => deploy(0, -1, html.find('[name="singleFile"]')[0].checked) },
-            east:  { label: "East",  callback: (html) => deploy(1, 0,  html.find('[name="singleFile"]')[0].checked) },
-            south: { label: "South", callback: (html) => deploy(0, 1,  html.find('[name="singleFile"]')[0].checked) },
-            west:  { label: "West",  callback: (html) => deploy(-1, 0, html.find('[name="singleFile"]')[0].checked) }
-        },
-        default: "north"
-    }).render(true);
+        buttons: [
+            { action: "north", label: "North", default: true, callback: (event, button, dialog) => deploy(0, -1, $(dialog.element).find('[name="singleFile"]')[0].checked) },
+            { action: "east",  label: "East",  callback: (event, button, dialog) => deploy(1, 0,  $(dialog.element).find('[name="singleFile"]')[0].checked) },
+            { action: "south", label: "South", callback: (event, button, dialog) => deploy(0, 1,  $(dialog.element).find('[name="singleFile"]')[0].checked) },
+            { action: "west",  label: "West",  callback: (event, button, dialog) => deploy(-1, 0, $(dialog.element).find('[name="singleFile"]')[0].checked) }
+        ]
+    });
 }
 
 function getPartyActors() {

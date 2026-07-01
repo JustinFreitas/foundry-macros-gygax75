@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 // Mocking FoundryVTT globals
 global.canvas = {
   tokens: {

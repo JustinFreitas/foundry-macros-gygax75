@@ -42,14 +42,18 @@ if (partyActors.length === 0) {
     <ol class="mo-list" id="mo-list">${rows}</ol>
     `;
 
-    new Dialog({
-        title: "Set Marching Order",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Set Marching Order" },
         content: content,
-        buttons: {
-            save: {
+        buttons: [
+            {
+                action: "save",
                 icon: '<i class="fas fa-save"></i>',
                 label: "Save Order",
-                callback: async (html) => {
+                default: true,
+                callback: async (event, button, dialog) => {
+                    const html = [dialog.element];
                     const rows = html[0].querySelectorAll(".mo-row");
                     let order = 1;
                     for (const row of rows) {
@@ -60,13 +64,14 @@ if (partyActors.length === 0) {
                     ui.notifications.info("Marching order saved.");
                 }
             },
-            cancel: {
+            {
+                action: "cancel",
                 icon: '<i class="fas fa-times"></i>',
                 label: "Cancel"
             }
-        },
-        default: "save",
-        render: (html) => {
+        ],
+        render: (event, target) => {
+            const html = [target];
             const list = html[0].querySelector("#mo-list");
             if (!list) return;
 
@@ -107,5 +112,5 @@ if (partyActors.length === 0) {
                 renumber();
             });
         }
-    }).render(true);
+    });
 }

@@ -1,3 +1,5 @@
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
 const fs = require('fs');
 const path = require('path');
 
@@ -26,9 +28,10 @@ describe('set-paid-through-date', () => {
             },
         };
 
-        global.Dialog = jest.fn((data) => {
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((data) => {
             // Immediately invoke the callback for testing purposes
-            if (data.buttons.ok && data.buttons.ok.callback) {
+            const btn = data.buttons.find(b => b.action === 'ok');
+            if (btn && btn.callback) {
                 const html = {
                     find: (selector) => {
                         if (selector === '#paid-through-date') {
@@ -37,7 +40,7 @@ describe('set-paid-through-date', () => {
                         return [];
                     },
                 };
-                data.buttons.ok.callback(html);
+                btn.callback(null, null, { element: html });
             }
             return {
                 render: jest.fn(),
@@ -92,12 +95,13 @@ describe('set-paid-through-date', () => {
     });
 
     test('should show an error if date is not entered', () => {
-        global.Dialog = jest.fn((data) => {
-            if (data.buttons.ok && data.buttons.ok.callback) {
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((data) => {
+            const btn = data.buttons.find(b => b.action === 'ok');
+            if (btn && btn.callback) {
                 const html = {
                     find: () => [{ value: '' }],
                 };
-                data.buttons.ok.callback(html);
+                btn.callback(null, null, { element: html });
             }
             return {
                 render: jest.fn(),
@@ -111,12 +115,13 @@ describe('set-paid-through-date', () => {
     });
 
     test('should show an error for an invalid date format', () => {
-        global.Dialog = jest.fn((data) => {
-            if (data.buttons.ok && data.buttons.ok.callback) {
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((data) => {
+            const btn = data.buttons.find(b => b.action === 'ok');
+            if (btn && btn.callback) {
                 const html = {
                     find: () => [{ value: 'invalid date' }],
                 };
-                data.buttons.ok.callback(html);
+                btn.callback(null, null, { element: html });
             }
             return {
                 render: jest.fn(),
@@ -131,14 +136,15 @@ describe('set-paid-through-date', () => {
 
     // Build a Dialog mock that feeds the given date string to the ok callback.
     const dialogWithDate = (value) => jest.fn((data) => {
-        if (data.buttons.ok && data.buttons.ok.callback) {
-            data.buttons.ok.callback({ find: () => [{ value }] });
+        const btn = data.buttons.find(b => b.action === 'ok');
+        if (btn && btn.callback) {
+            btn.callback(null, null, { element: { find: () => [{ value }] } });
         }
         return { render: jest.fn() };
     });
 
     test('should interpret a 2-digit year as 20xx and normalize to MM/DD/YYYY', async () => {
-        global.Dialog = dialogWithDate('3/4/26');
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = dialogWithDate('3/4/26');
         canvas.tokens.controlled = [{ actor: mockActor }];
         eval(macroScript);
 
@@ -149,7 +155,7 @@ describe('set-paid-through-date', () => {
     });
 
     test('should reject an overflow date like 2/30/2025', () => {
-        global.Dialog = dialogWithDate('2/30/2025');
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = dialogWithDate('2/30/2025');
         canvas.tokens.controlled = [{ actor: mockActor }];
         eval(macroScript);
 
@@ -158,7 +164,7 @@ describe('set-paid-through-date', () => {
     });
 
     test('should pad single-digit month and day', async () => {
-        global.Dialog = dialogWithDate('1/5/2025');
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = dialogWithDate('1/5/2025');
         canvas.tokens.controlled = [{ actor: mockActor }];
         eval(macroScript);
 

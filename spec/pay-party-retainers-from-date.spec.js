@@ -1,3 +1,5 @@
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
 const fs = require('fs');
 const path = require('path');
 
@@ -72,8 +74,8 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-        capturedCallback = dialogData.buttons.calculate.callback;
+    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+        capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
         return {
             render: jest.fn()
         };
@@ -81,7 +83,7 @@ describe('PayPartyRetainersFromDate', () => {
 
     eval(macroScript);
 
-    await capturedCallback(html);
+    await capturedCallback(null, null, { element: html });
 
     // Wait for async operations within the macro to complete
     await new Promise(process.nextTick);
@@ -100,14 +102,14 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-      capturedCallback = dialogData.buttons.calculate.callback;
+    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+      capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
 
     eval(macroScript);
 
-    await capturedCallback(html);
+    await capturedCallback(null, null, { element: html });
     await new Promise(process.nextTick);
 
     // currentDate comes from formatTimestamp -> '1/10/2025'; the stored flag must
@@ -122,14 +124,14 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-      capturedCallback = dialogData.buttons.calculate.callback;
+    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+      capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
 
     eval(macroScript);
 
-    await capturedCallback(html);
+    await capturedCallback(null, null, { element: html });
     await new Promise(process.nextTick);
 
     expect(ui.notifications.error).toHaveBeenCalledWith('Invalid or ambiguous date format. Please enter a date as MM/DD/YYYY.');

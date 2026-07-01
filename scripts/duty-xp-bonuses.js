@@ -54,13 +54,17 @@ formHtml.push(`
 </form>
 `);
 
-    new Dialog({
-        title: "Duty XP Bonuses",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Duty XP Bonuses" },
         content: formHtml.join('\n'),
-        buttons: {
-            calculate: {
+        buttons: [
+            {
+                action: "calculate",
                 label: "Apply Bonuses",
-                callback: (html) => {
+                default: true,
+                callback: (event, button, dialog) => {
+                    const html = $(dialog.element);
                     const requestUserSelectElement = html.find('#request-user-select')[0];
                     const callerUserSelectElement = html.find('#caller-user-select')[0];
                     const mapperUserSelectElement = html.find('#mapper-user-select')[0];
@@ -130,10 +134,10 @@ formHtml.push(`
                     });
                 }
             },
-            close: {
+            {
+                action: "close",
                 label: "Close"
             }
-        },
-        default: "calculate"
-    }).render(true);
+        ]
+    });
 }

@@ -63,9 +63,11 @@
     `<li><b>${h.where}</b> — <i>${h.name}</i> <code>[${h.field}]</code><br><small>${h.path}</small></li>`
   ).join("");
 
-  new Dialog({
-    title: `Found ${hits.length} "${NEEDLE}" reference(s)`,
+  const { DialogV2 } = foundry.applications.api;
+  DialogV2.wait({
+    window: { title: `Found ${hits.length} "${NEEDLE}" reference(s)` },
+    position: { width: 600 },
     content: `<p>These documents point at the broken path. Details also logged to the console (F12).</p><ul>${rows}</ul>`,
-    buttons: { ok: { label: "Close" } }
-  }, { width: 600 }).render(true);
+    buttons: [ { action: "ok", label: "Close", default: true } ]
+  });
 })();

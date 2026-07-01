@@ -1,8 +1,9 @@
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
 const fs = require('fs');
 const path = require('path');
 
 const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/duty-xp-bonuses.js'), 'utf8');
-
 
 describe("Duty XP Bonuses Macro", () => {
     beforeEach(() => {
@@ -73,8 +74,11 @@ describe("Duty XP Bonuses Macro", () => {
             })
         };
 
-        globalThis.Dialog = jest.fn().mockImplementation((dialogData) => {
-            dialogData.buttons.calculate.callback(mockHtml);
+        global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+            const btn = dialogData.buttons.find(b => b.action === 'calculate');
+            if (btn && btn.callback) {
+                btn.callback(null, null, { element: mockHtml });
+            }
             return {
                 render: jest.fn()
             };
@@ -122,4 +126,3 @@ describe("Duty XP Bonuses Macro", () => {
         expect(messages[0].content).toContain('<b>Bob:</b> XP bonus updated from 5 to 10 for duty caller.');
     });
 });
-

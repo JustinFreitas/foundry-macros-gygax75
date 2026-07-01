@@ -415,14 +415,20 @@ function openConsumptionDialog(unitsFed) {
 
     // --- 3d. Create and Render the Consumption Dialog ---
 
-    new Dialog({
-        title: `${actor.name}'s Consumables`,
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: `${actor.name}'s Consumables` },
+        position: { width: dialogWidth },
+        classes: ["resizable"],
         content: content,
-        buttons: {
-            consume: {
+        buttons: [
+            {
+                action: "consume",
                 icon: '<i class="fas fa-utensils"></i>',
                 label: 'Consume',
-                callback: async (html) => {
+                default: true,
+                callback: async (event, button, dialog) => {
+                    const html = $(dialog.element);
                     
                     const updates = [];
                     let logMessages = [];
@@ -484,15 +490,15 @@ function openConsumptionDialog(unitsFed) {
                     }
                 }
             },
-            cancel: {
+            {
+                action: "cancel",
                 icon: '<i class="fas fa-times"></i>',
                 label: 'Cancel',
                 callback: () => ui.notifications.info("Consumption cancelled.")
             }
-        },
-        default: 'consume',
+        ],
         close: () => console.log("Consumable Dialog Closed")
-    }).render(true, {width: dialogWidth, resizable: true}); 
+    }); 
 }
 
 
@@ -537,14 +543,20 @@ const preCheckContent = `
     </form>
 `;
 
-new Dialog({
-    title: `${actor.name}'s Daily Foraging Check`,
+const { DialogV2 } = foundry.applications.api;
+DialogV2.wait({
+    window: { title: `${actor.name}'s Daily Foraging Check` },
+    position: { width: 400 },
+    classes: ["resizable"],
     content: preCheckContent,
-    buttons: {
-        proceed: {
+    buttons: [
+        {
+            action: "proceed",
             icon: '<i class="fas fa-arrow-right"></i>',
             label: 'Continue',
-            callback: (html) => {
+            default: true,
+            callback: (event, button, dialog) => {
+                const html = $(dialog.element);
                 // Get the selected percentage value (0.0 to 1.0)
                 const selectedValue = parseFloat(html.find('input[name="percent_fed"]:checked').val());
                 
@@ -563,11 +575,11 @@ new Dialog({
                 openConsumptionDialog(unitsFed);
             }
         },
-        cancel: {
+        {
+            action: "cancel",
             icon: '<i class="fas fa-times"></i>',
             label: 'Cancel All',
             callback: () => ui.notifications.info("Daily check cancelled.")
         }
-    },
-    default: 'proceed'
-}).render(true, {width: 400, resizable: true});
+    ]
+});

@@ -28,9 +28,11 @@ global.ChatMessage = {
     })
 };
 
-global.Dialog = jest.fn(function(dialogData) {
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function(dialogData) {
     this.render = jest.fn();
-    dialogData.buttons.yes.callback();
+    dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
 });
 
 describe("Delete Found Items Macro", () => {

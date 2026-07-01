@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 
 const fs = require('fs');
 const path = require('path');

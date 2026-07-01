@@ -38,8 +38,9 @@ if (!selectedActors.length) {
         return `${actor.name} (${paidThrough})`;
     }).join('<br>');
 
-    new Dialog({
-        title: "Set Paid Through Date",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Set Paid Through Date" },
         content: `
     <form>
       <div>${actorInfo}</div>
@@ -50,10 +51,13 @@ if (!selectedActors.length) {
       </div>
     </form>
   `,
-        buttons: {
-            ok: {
+        buttons: [
+            {
+                action: "ok",
                 label: "Set Date",
-                callback: async (html) => {
+                default: true,
+                callback: async (event, button, dialog) => {
+                    const html = $(dialog.element);
                     const dateString = html.find('#paid-through-date')[0].value;
                     if (!dateString) {
                         ui.notifications.error("Please enter a date.");
@@ -82,10 +86,10 @@ if (!selectedActors.length) {
                     });
                 }
             },
-            cancel: {
+            {
+                action: "cancel",
                 label: "Cancel"
             }
-        },
-        default: "ok"
-    }).render(true);
+        ]
+    });
 }

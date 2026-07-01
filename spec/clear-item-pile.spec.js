@@ -16,7 +16,9 @@ global.ui = {
     }
 };
 
-global.Dialog = jest.fn(function(dialogData) {
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function(dialogData) {
     this.render = jest.fn();
     this.data = dialogData; 
 });
@@ -82,7 +84,7 @@ describe("Clear Item Pile Macro", () => {
         Dialog.mockImplementationOnce(function(dialogData) {
             this.render = jest.fn();
             // Simulate clicking 'yes'
-            dialogData.buttons.yes.callback();
+            dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
         });
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;

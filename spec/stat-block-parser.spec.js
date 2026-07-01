@@ -1,3 +1,4 @@
+global.$ = (x) => x;
 describe("stat-block-parser", () => {
     let mockDialog;
     let mockActor;

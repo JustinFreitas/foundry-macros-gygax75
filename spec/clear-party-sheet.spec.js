@@ -17,7 +17,9 @@ global.Hooks = {
     call: jest.fn()
 };
 
-global.Dialog = jest.fn(function(dialogData) {
+global.$ = (x) => x;
+global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function(dialogData) {
     this.render = jest.fn();
     this.data = dialogData;
 });
@@ -70,7 +72,7 @@ describe("Clear Party Sheet Macro", () => {
         Dialog.mockImplementationOnce(function(dialogData) {
             this.render = jest.fn();
             // Simulate clicking 'yes' and store the promise
-            dialogPromise = dialogData.buttons.yes.callback();
+            dialogPromise = dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
         });
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;

@@ -95,13 +95,17 @@ if (document?.getElementById('sheet-data')) {
     }   
     formHtml.push('</form>');
     
-    new Dialog({
-        title: "Character Upkeep Deductions",
+    const { DialogV2 } = foundry.applications.api;
+    DialogV2.wait({
+        window: { title: "Character Upkeep Deductions" },
         content: formHtml.join('\n'),
-        buttons: {
-            calculate: {
+        buttons: [
+            {
+                action: "calculate",
                 label: "Process Upkeep",
-                callback: async (html) => {
+                default: true,
+                callback: async (event, button, dialog) => {
+                    const html = $(dialog.element);
                     const BANK_NAME = 'GP (Bank)';
                     const characters = html.find('input.character');
                     const actorLogs = [];
@@ -178,10 +182,10 @@ if (document?.getElementById('sheet-data')) {
                     });
                 }
             },
-            close: {
+            {
+                action: "close",
                 label: "Close"
             }
-        },
-        default: "calculate"
-    }).render(true);
+        ]
+    });
 }
