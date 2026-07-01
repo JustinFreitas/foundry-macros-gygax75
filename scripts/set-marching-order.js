@@ -24,20 +24,6 @@ if (partyActors.length === 0) {
     `).join("");
 
     const content = `
-    <style>
-        .mo-list { list-style: none; margin: 0; padding: 0; }
-        .mo-row {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px; margin-bottom: 6px;
-            border: 1px solid var(--color-border-light-tertiary, rgba(255, 255, 255, 0.2));
-            border-radius: 4px; background: rgba(255,255,255,0.05); cursor: grab;
-        }
-        .mo-row.mo-dragging { opacity: 0.4; }
-        .mo-row.mo-over { border-color: #ff6400; border-style: dashed; background: rgba(255, 100, 0, 0.1); }
-        .mo-grip { opacity: 0.5; margin-right: 4px; }
-        .mo-rank { width: 1.5em; text-align: right; font-weight: bold; }
-        .mo-name { flex: 1; }
-    </style>
     <p>Drag the characters into marching order (top = first to deploy).</p>
     <div class="mo-list" id="mo-list">${rows}</div>
     `;
@@ -76,6 +62,27 @@ if (partyActors.length === 0) {
     
     dialog.addEventListener("render", (event) => {
         const target = event.target.element;
+        
+        if (!target.querySelector("#mo-styles")) {
+            const style = document.createElement("style");
+            style.id = "mo-styles";
+            style.innerHTML = `
+                .mo-list { list-style: none; margin: 0; padding: 0; }
+                .mo-row {
+                    display: flex; align-items: center; gap: 8px;
+                    padding: 8px; margin-bottom: 6px;
+                    border: 1px solid var(--color-border-light-tertiary, rgba(255, 255, 255, 0.2));
+                    border-radius: 4px; background: rgba(255,255,255,0.05); cursor: grab;
+                }
+                .mo-row.mo-dragging { opacity: 0.4; }
+                .mo-row.mo-over { border-color: #ff6400; border-style: dashed; background: rgba(255, 100, 0, 0.1); }
+                .mo-grip { opacity: 0.5; margin-right: 4px; }
+                .mo-rank { width: 1.5em; text-align: right; font-weight: bold; }
+                .mo-name { flex: 1; }
+            `;
+            target.prepend(style);
+        }
+
         const html = [target];
             const list = html[0].querySelector("#mo-list");
             if (!list) return;
