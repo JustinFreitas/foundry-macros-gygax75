@@ -10,7 +10,9 @@ if (partyMembers.length === 0) {
 
 const { DialogV2 } = foundry.applications.api;
 DialogV2.wait({
-    window: { title: "Clear Party Sheet" },
+    classes: ["dialog"],
+        position: { width: 400, height: "auto" },
+        window: { title: "Clear Party Sheet" },
     content: `<p>Are you sure you want to remove all ${partyMembers.length} actors from the party sheet?</p>`,
     buttons: [
         {

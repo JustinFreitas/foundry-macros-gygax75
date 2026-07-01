@@ -40,6 +40,8 @@ if (!selectedActors.length) {
 
     const { DialogV2 } = foundry.applications.api;
     DialogV2.wait({
+        classes: ["dialog"],
+        position: { width: 400, height: "auto" },
         window: { title: "Set Paid Through Date" },
         content: `
     <form>

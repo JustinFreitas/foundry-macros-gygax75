@@ -28,6 +28,8 @@ if (!leaderToken) {
 } else {
     const { DialogV2 } = foundry.applications.api;
     DialogV2.wait({
+        classes: ["dialog"],
+        position: { width: 400, height: "auto" },
         window: { title: "Marching Formation" },
         content: `
             <p style='text-align:center;'>Which direction is the party facing?</p>

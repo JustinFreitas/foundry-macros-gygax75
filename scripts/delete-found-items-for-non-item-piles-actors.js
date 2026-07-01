@@ -1,6 +1,8 @@
 const { DialogV2 } = foundry.applications.api;
 DialogV2.wait({
-    window: { title: "Delete Found Items" },
+    classes: ["dialog"],
+        position: { width: 400, height: "auto" },
+        window: { title: "Delete Found Items" },
     content: "<p>Are you sure you want to delete found items for all non-item pile actors? This action cannot be undone.</p>",
     buttons: [
         {

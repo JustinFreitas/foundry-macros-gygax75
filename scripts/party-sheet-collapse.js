@@ -27,7 +27,9 @@ if (!partyActor) {
     } else {
         const { DialogV2 } = foundry.applications.api;
         DialogV2.wait({
-            window: { title: "Collapse Party" },
+            classes: ["dialog"],
+        position: { width: 400, height: "auto" },
+        window: { title: "Collapse Party" },
             content: `
                 <p style='text-align:center;'>Which direction is the party facing?</p>
                 <div class="form-group" style="display:flex; align-items:center; margin-bottom:10px;">
