@@ -53,8 +53,7 @@ global.ChatMessage = {
 };
 
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
-global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
+global.Dialog = jest.fn().mockImplementation(function(dialogData) {
     const promise = new Promise(async (resolve, reject) => {
         const html = {
             find: (selector) => {
@@ -77,6 +76,8 @@ global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogD
     global.Dialog.mostRecentInstance = instance;
     return instance;
 });
+global.Dialog.wait = global.Dialog;
+global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
 global.document = {
     getElementById: (id) => null
@@ -132,8 +133,7 @@ describe("Character Upkeep Macro", () => {
         // Feed garbage into the upkeep field. Before the fix, "+'abc'" produced NaN
         // and was written straight into the bank quantity.
         global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
-global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
+global.Dialog = jest.fn().mockImplementation(function(dialogData) {
             const promise = new Promise(async (resolve) => {
                 const html = {
                     find: (selector) => {
@@ -149,6 +149,8 @@ global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogD
             global.Dialog.mostRecentInstance = instance;
             return instance;
         });
+global.Dialog.wait = global.Dialog;
+global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         const bankItem = {
             name: 'GP (Bank)',
@@ -188,8 +190,7 @@ global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogD
 
     test("should treat negative upkeep input as No Downtime Cost", async () => {
         global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
-global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogData) => {
+global.Dialog = jest.fn().mockImplementation(function(dialogData) {
             const promise = new Promise(async (resolve) => {
                 const html = {
                     find: (selector) => {
@@ -205,6 +206,8 @@ global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn((dialogD
             global.Dialog.mostRecentInstance = instance;
             return instance;
         });
+global.Dialog.wait = global.Dialog;
+global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         const bankItem = {
             name: 'GP (Bank)',

@@ -1,5 +1,5 @@
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry = { applications: { api: { DialogV2: jest.fn() } } };
 const fs = require('fs');
 const path = require('path');
 
@@ -74,7 +74,7 @@ describe("Duty XP Bonuses Macro", () => {
             })
         };
 
-        global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+        global.Dialog = jest.fn().mockImplementation((dialogData) => {
             const btn = dialogData.buttons.find(b => b.action === 'calculate');
             if (btn && btn.callback) {
                 btn.callback(null, null, { element: mockHtml });
@@ -83,6 +83,8 @@ describe("Duty XP Bonuses Macro", () => {
                 render: jest.fn()
             };
         });
+        global.Dialog.wait = global.Dialog;
+        global.foundry.applications.api.DialogV2 = global.Dialog;
 
         game.users.set([]);
         game.actors.set([]);

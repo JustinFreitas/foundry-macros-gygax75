@@ -70,31 +70,24 @@ describe('TreasureSplitWithBanking', () => {
         global.ChatMessage = ChatMessage;
         global.ui = { notifications: { info: jest.fn() } };
 
+        const DialogMock = jest.fn().mockImplementation((dialogData) => {
+            if (dialogData.buttons) {
+                const calcBtn = dialogData.buttons.find(b => b.action === 'calculate');
+                if (calcBtn) capturedCallback = calcBtn.callback;
+            }
+            return {
+                render: jest.fn()
+            };
+        });
+        DialogMock.wait = DialogMock;
         global.foundry = {
             applications: {
                 api: {
-                    DialogV2: {
-                        wait: jest.fn().mockImplementation((dialogData) => {
-                            if (dialogData.buttons) {
-                                // V2 buttons are an array
-                                const calcBtn = dialogData.buttons.find(b => b.action === 'calculate');
-                                if (calcBtn) capturedCallback = calcBtn.callback;
-                            }
-                            return Promise.resolve(null);
-                        })
-                    }
+                    DialogV2: DialogMock
                 }
             }
         };
-
-        global.Dialog = {
-            wait: jest.fn().mockImplementation((dialogData) => {
-                if (dialogData.buttons && dialogData.buttons.calculate) {
-                    capturedCallback = dialogData.buttons.calculate.callback;
-                }
-                return Promise.resolve(null);
-            })
-        };
+        global.Dialog = DialogMock;
 
         global.jQuery = jest.fn();
     });

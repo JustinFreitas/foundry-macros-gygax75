@@ -25,11 +25,12 @@ global.game = {
 global.ui = { notifications: { warn: jest.fn(), info: jest.fn() } };
 
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
-global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn(function (dialogData) {
+global.Dialog = jest.fn().mockImplementation(function (dialogData) {
     this.render = jest.fn();
     this.data = dialogData;
 });
+global.Dialog.wait = global.Dialog;
+global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
 // A party-sheet character actor.
 function charActor(id, marchingOrder) {

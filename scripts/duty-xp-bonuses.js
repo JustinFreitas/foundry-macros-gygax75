@@ -55,7 +55,7 @@ formHtml.push(`
 `);
 
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Duty XP Bonuses" },
@@ -142,4 +142,5 @@ formHtml.push(`
             }
         ]
     });
+    dialog.render(true);
 }

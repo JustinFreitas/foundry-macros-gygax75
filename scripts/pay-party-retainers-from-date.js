@@ -56,7 +56,7 @@ if (document?.getElementById('start-date')) {
     const retainersInGame = game.actors.filter(actor => actor.type === 'character' && actor.system.retainer?.enabled && actor.system.details?.class !== 'Mule');
     
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Pay All PC Retainers From Date" },
@@ -175,5 +175,6 @@ if (document?.getElementById('start-date')) {
             }
         ]
     });
+    dialog.render(true);
 }
 

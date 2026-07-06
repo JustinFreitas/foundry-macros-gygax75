@@ -1,5 +1,5 @@
 const { DialogV2 } = foundry.applications.api;
-DialogV2.wait({
+const dialog = new DialogV2({
     classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Delete Found Items" },
@@ -44,3 +44,4 @@ DialogV2.wait({
         }
     ]
 });
+    dialog.render(true);

@@ -64,11 +64,12 @@
   ).join("");
 
   const { DialogV2 } = foundry.applications.api;
-  DialogV2.wait({
+  const dialog = new DialogV2({
     classes: ["dialog"],
         window: { title: `Found ${hits.length} "${NEEDLE}" reference(s)` },
     position: { width: 600 },
     content: `<p>These documents point at the broken path. Details also logged to the console (F12).</p><ul>${rows}</ul>`,
     buttons: [ { action: "ok", label: "Close", default: true } ]
   });
+    dialog.render(true);
 })();

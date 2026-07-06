@@ -193,7 +193,7 @@ function haulToHtml(haul) {
 async function promptLevel() {
     return await new Promise((resolve) => {
         const { DialogV2 } = foundry.applications.api;
-        DialogV2.wait({
+        const dialog = new DialogV2({
             classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Encounter Treasure" },
@@ -214,6 +214,7 @@ async function promptLevel() {
                 { action: "cancel", label: "Cancel", callback: () => resolve(null) }
             ]
         });
+    dialog.render(true);
     });
 }
 

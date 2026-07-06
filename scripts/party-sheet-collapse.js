@@ -26,7 +26,7 @@ if (!partyActor) {
         ui.notifications.warn("No party-character tokens were found on this scene to collapse.");
     } else {
         const { DialogV2 } = foundry.applications.api;
-        DialogV2.wait({
+        const dialog = new DialogV2({
             classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Collapse Party" },
@@ -47,6 +47,7 @@ if (!partyActor) {
                 { action: "west",  label: "West",  callback: (event, button, dialog) => collapse(-1, 0, $(dialog.element)) }
             ]
         });
+    dialog.render(true);
 
         async function collapse(dirX, dirY, html) {
             const size = parseInt(html.find('[name="size"]')[0].value) || 1;

@@ -96,7 +96,7 @@ if (document?.getElementById('sheet-data')) {
     formHtml.push('</form>');
     
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Character Upkeep Deductions" },
@@ -190,4 +190,5 @@ if (document?.getElementById('sheet-data')) {
             }
         ]
     });
+    dialog.render(true);
 }

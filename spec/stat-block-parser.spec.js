@@ -19,25 +19,21 @@ describe("stat-block-parser", () => {
 
         mockDialog = { config: {} };
 
+        const DialogMock = jest.fn().mockImplementation((config) => {
+            mockDialog.config = config;
+            return {
+                render: jest.fn()
+            };
+        });
+        DialogMock.wait = DialogMock;
         global.foundry = {
             applications: {
                 api: {
-                    DialogV2: {
-                        wait: jest.fn().mockImplementation((config) => {
-                            mockDialog.config = config;
-                            return new Promise(() => {}); // never resolves in some tests
-                        })
-                    }
+                    DialogV2: DialogMock
                 }
             }
         };
-
-        global.Dialog = {
-            wait: jest.fn().mockImplementation((config) => {
-                mockDialog.config = config;
-                return new Promise(() => {});
-            })
-        };
+        global.Dialog = DialogMock;
 
         global.game = {
             actors: {

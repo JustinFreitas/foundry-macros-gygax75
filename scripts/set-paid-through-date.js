@@ -39,7 +39,7 @@ if (!selectedActors.length) {
     }).join('<br>');
 
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Set Paid Through Date" },
@@ -94,4 +94,5 @@ if (!selectedActors.length) {
             }
         ]
     });
+    dialog.render(true);
 }

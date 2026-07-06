@@ -333,22 +333,27 @@ async function dialogWaitShim({ title, content, buttons, defaultButton, ...optio
   const DialogV2 = foundry.applications?.api?.DialogV2;
 
   if (DialogV2) {
-    return await DialogV2.wait({
-      classes: ["dialog"],
-      position: { width: 400, height: "auto" },
-      window: { title, ...options.window },
-      content: content,
-      buttons: Object.entries(buttons).map(([id, btn]) => ({
-        action: id,
-        label: btn.label,
-        icon: btn.icon,
-        default: id === defaultButton,
-        callback: (event, button, dialog) => {
-          return btn.callback ? btn.callback(dialog.element) : id;
-        }
-      })),
-      rejectClose: false,
-      ...options
+    return new Promise((resolve) => {
+      const dialog = new DialogV2({
+        classes: ["dialog"],
+        position: { width: 400, height: "auto" },
+        window: { title, ...options.window },
+        content: content,
+        buttons: Object.entries(buttons).map(([id, btn]) => ({
+          action: id,
+          label: btn.label,
+          icon: btn.icon,
+          default: id === defaultButton,
+          callback: (event, button, dialog) => {
+            const result = btn.callback ? btn.callback(dialog.element) : id;
+            resolve(result);
+            return result;
+          }
+        })),
+        rejectClose: false,
+        ...options
+      });
+      dialog.render(true);
     });
   }
 

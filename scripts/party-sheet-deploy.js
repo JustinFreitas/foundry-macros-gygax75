@@ -27,7 +27,7 @@ if (!leaderToken) {
     ui.notifications.warn("No characters found in the OSE Party Sheet!");
 } else {
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         classes: ["dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Marching Formation" },
@@ -45,6 +45,7 @@ if (!leaderToken) {
             { action: "west",  label: "West",  callback: (event, button, dialog) => deploy(-1, 0, $(dialog.element).find('[name="singleFile"]')[0].checked) }
         ]
     });
+    dialog.render(true);
 }
 
 function getPartyActors() {

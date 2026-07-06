@@ -416,7 +416,7 @@ function openConsumptionDialog(unitsFed) {
     // --- 3d. Create and Render the Consumption Dialog ---
 
     const { DialogV2 } = foundry.applications.api;
-    DialogV2.wait({
+    const dialog = new DialogV2({
         window: { title: `${actor.name}'s Consumables` },
         position: { width: dialogWidth },
         classes: ["dialog", "resizable"],
@@ -498,7 +498,8 @@ function openConsumptionDialog(unitsFed) {
             }
         ],
         close: () => console.log("Consumable Dialog Closed")
-    }); 
+    });
+    dialog.render(true); 
 }
 
 
@@ -544,7 +545,7 @@ const preCheckContent = `
 `;
 
 const { DialogV2 } = foundry.applications.api;
-DialogV2.wait({
+const dialog = new DialogV2({
     window: { title: `${actor.name}'s Daily Foraging Check` },
     position: { width: 400 },
     classes: ["dialog", "resizable"],
@@ -583,3 +584,4 @@ DialogV2.wait({
         }
     ]
 });
+    dialog.render(true);

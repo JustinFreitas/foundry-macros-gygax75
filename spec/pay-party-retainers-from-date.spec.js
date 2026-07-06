@@ -1,5 +1,5 @@
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: {} } } };
+global.foundry = { applications: { api: { DialogV2: jest.fn() } } };
 const fs = require('fs');
 const path = require('path');
 
@@ -74,12 +74,14 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+    global.Dialog = jest.fn().mockImplementation((dialogData) => {
         capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
         return {
             render: jest.fn()
         };
     });
+    global.Dialog.wait = global.Dialog;
+    global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
 
@@ -102,10 +104,12 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+    global.Dialog = jest.fn().mockImplementation((dialogData) => {
       capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
+    global.Dialog.wait = global.Dialog;
+    global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
 
@@ -124,10 +128,12 @@ describe('PayPartyRetainersFromDate', () => {
     };
 
     let capturedCallback;
-    global.foundry.applications.api.DialogV2.wait = global.Dialog = jest.fn().mockImplementation((dialogData) => {
+    global.Dialog = jest.fn().mockImplementation((dialogData) => {
       capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
+    global.Dialog.wait = global.Dialog;
+    global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
 
