@@ -122,9 +122,7 @@ describe('CarouseForHiredHelp', () => {
         global.SimpleCalendar = SimpleCalendar;
         global.Actor = Actor;
         global.foundry = { applications: { api: { DialogV2: Dialog } } };
-        global.foundry.applications.api.DialogV2.wait = Dialog;
         global.Dialog = Dialog;
-        global.foundry.applications.api.DialogV2.wait = Dialog;
 
         // Mock jQuery element with jQuery methods directly on it
         const elementMock = (selector) => {
@@ -192,7 +190,7 @@ describe('CarouseForHiredHelp', () => {
     test('should load Dialog and display selected PC stats correctly', async () => {
         eval(macroScript);
 
-        expect(global.foundry.applications.api.DialogV2.wait).toHaveBeenCalled();
+        expect(global.foundry.applications.api.DialogV2).toHaveBeenCalled();
         await capturedRender({ target: { element: mockHtml } });
 
         // Verify HTML element search was performed for pc-stats-display

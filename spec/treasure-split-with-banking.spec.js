@@ -79,7 +79,6 @@ describe('TreasureSplitWithBanking', () => {
                 render: jest.fn()
             };
         });
-        DialogMock.wait = DialogMock;
         global.foundry = {
             applications: {
                 api: {

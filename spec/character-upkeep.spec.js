@@ -76,7 +76,6 @@ global.Dialog = jest.fn().mockImplementation(function(dialogData) {
     global.Dialog.mostRecentInstance = instance;
     return instance;
 });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
 global.document = {
@@ -149,7 +148,6 @@ global.Dialog = jest.fn().mockImplementation(function(dialogData) {
             global.Dialog.mostRecentInstance = instance;
             return instance;
         });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         const bankItem = {
@@ -206,7 +204,6 @@ global.Dialog = jest.fn().mockImplementation(function(dialogData) {
             global.Dialog.mostRecentInstance = instance;
             return instance;
         });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         const bankItem = {

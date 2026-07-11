@@ -83,7 +83,6 @@ describe("Duty XP Bonuses Macro", () => {
                 render: jest.fn()
             };
         });
-        global.Dialog.wait = global.Dialog;
         global.foundry.applications.api.DialogV2 = global.Dialog;
 
         game.users.set([]);

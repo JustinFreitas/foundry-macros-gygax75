@@ -45,7 +45,6 @@ describe('set-paid-through-date', () => {
                 render: jest.fn(),
             };
         });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         global.ChatMessage = {
@@ -108,7 +107,6 @@ global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
                 render: jest.fn(),
             };
         });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         canvas.tokens.controlled = [{ actor: mockActor }];
@@ -130,7 +128,6 @@ global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
                 render: jest.fn(),
             };
         });
-global.Dialog.wait = global.Dialog;
 global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
 
         canvas.tokens.controlled = [{ actor: mockActor }];
@@ -148,7 +145,6 @@ global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
             }
             return { render: jest.fn() };
         });
-        mock.wait = mock;
         return mock;
     };
 

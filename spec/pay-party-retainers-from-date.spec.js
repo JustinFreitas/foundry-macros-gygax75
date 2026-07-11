@@ -80,7 +80,6 @@ describe('PayPartyRetainersFromDate', () => {
             render: jest.fn()
         };
     });
-    global.Dialog.wait = global.Dialog;
     global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
@@ -108,7 +107,6 @@ describe('PayPartyRetainersFromDate', () => {
       capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
-    global.Dialog.wait = global.Dialog;
     global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
@@ -132,7 +130,6 @@ describe('PayPartyRetainersFromDate', () => {
       capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
       return { render: jest.fn() };
     });
-    global.Dialog.wait = global.Dialog;
     global.foundry.applications.api.DialogV2 = global.Dialog;
 
     eval(macroScript);
