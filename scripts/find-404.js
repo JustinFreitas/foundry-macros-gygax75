@@ -65,7 +65,7 @@
 
   const { DialogV2 } = foundry.applications.api;
   const dialog = new DialogV2({
-    classes: ["dialog"],
+    classes: ["ose", "dialog"],
         window: { title: `Found ${hits.length} "${NEEDLE}" reference(s)` },
     position: { width: 600 },
     content: `<p>These documents point at the broken path. Details also logged to the console (F12).</p><ul>${rows}</ul>`,

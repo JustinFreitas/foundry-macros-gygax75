@@ -17,7 +17,7 @@ if (itemPiles.length === 0) {
 
 const { DialogV2 } = foundry.applications.api;
 const dialog = new DialogV2({
-    classes: ["dialog"],
+    classes: ["ose", "dialog"],
     position: { width: 400, height: "auto" },
     window: { title: "Clear Item Piles" },
     content: `<p>Are you sure you want to clear all items from ${itemPiles.length} selected Item Pile(s)? This action cannot be undone.</p>`,

@@ -32,7 +32,7 @@ if (partyActors.length === 0) {
     const dialog = new DialogV2({
         window: { title: "Set Marching Order", icon: "fas fa-users" },
         position: { width: 400, height: "auto" },
-        classes: ["dialog"],
+        classes: ["ose", "dialog"],
         content: content,
         buttons: [
             {

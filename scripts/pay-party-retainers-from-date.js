@@ -57,7 +57,7 @@ if (document?.getElementById('start-date')) {
     
     const { DialogV2 } = foundry.applications.api;
     const dialog = new DialogV2({
-        classes: ["dialog"],
+        classes: ["ose", "dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Pay All PC Retainers From Date" },
         content: formHtml.join('\n'),

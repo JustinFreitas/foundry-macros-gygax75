@@ -27,7 +27,7 @@ if (!partyActor) {
     } else {
         const { DialogV2 } = foundry.applications.api;
         const dialog = new DialogV2({
-            classes: ["dialog"],
+            classes: ["ose", "dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Collapse Party" },
             content: `

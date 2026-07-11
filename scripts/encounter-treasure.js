@@ -194,7 +194,7 @@ async function promptLevel() {
     return await new Promise((resolve) => {
         const { DialogV2 } = foundry.applications.api;
         const dialog = new DialogV2({
-            classes: ["dialog"],
+            classes: ["ose", "dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Encounter Treasure" },
             content: `<p>Dungeon level for this drop:</p>

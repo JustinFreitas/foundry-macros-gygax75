@@ -335,7 +335,7 @@ async function dialogWaitShim({ title, content, buttons, defaultButton, ...optio
   if (DialogV2) {
     return new Promise((resolve) => {
       const dialog = new DialogV2({
-        classes: ["dialog"],
+        classes: ["ose", "dialog"],
         position: { width: 400, height: "auto" },
         window: { title, ...options.window },
         content: content,

@@ -760,7 +760,7 @@ if (pcsInParty.length === 0) {
 
     const { DialogV2 } = foundry.applications.api;
     const dialog = new DialogV2({
-        classes: ["dialog"],
+        classes: ["ose", "dialog"],
         window: { title: "B/X Hired Help & Carousing Tracker" },
         position: { width: 600, height: "auto" },
         content: (() => {

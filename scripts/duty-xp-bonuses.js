@@ -56,7 +56,7 @@ formHtml.push(`
 
     const { DialogV2 } = foundry.applications.api;
     const dialog = new DialogV2({
-        classes: ["dialog"],
+        classes: ["ose", "dialog"],
         position: { width: 400, height: "auto" },
         window: { title: "Duty XP Bonuses" },
         content: formHtml.join('\n'),
