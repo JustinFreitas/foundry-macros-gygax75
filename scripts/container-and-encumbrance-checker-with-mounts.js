@@ -12,6 +12,8 @@ function isWhiteListedTopLevelItem(item) {
         || item.name.startsWith('Ring')
         || item.name.startsWith("Arrows")
         || item.name.endsWith("Arrows")
+        || item.name.startsWith("Sling Stone")
+        || item.name.startsWith("Sling Bullet")
         || [
             'Elven Cloak and Boots',
             'GP (Bank)',
