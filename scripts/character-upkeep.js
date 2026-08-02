@@ -12,22 +12,38 @@ if (document?.getElementById('sheet-data')) {
 <script type="text/javascript">
     function rollXdYSum(numberOfDice, dieSize) {
         let total = 0;
-        for (let i = 0; i < numberOfDice; i++) {
-            const roll = Math.floor(Math.random() * dieSize) + 1;
+        const count = parseInt(numberOfDice, 10) || 0;
+        const size = parseInt(dieSize, 10) || 0;
+        for (let i = 0; i < count; i++) {
+            const roll = Math.floor(Math.random() * size) + 1;
             total += roll;
         }
         return total;
     }
    
     function findCharacterInSheet(twoDimensionalArray, nameToFind) {
+        if (!nameToFind) return undefined;
+        const target = nameToFind.trim().toLowerCase();
         for (let row = 0; row < twoDimensionalArray.length; row++) {
             for (let col = 0; col < twoDimensionalArray[row].length; col++) {
-                if (twoDimensionalArray[row][col] === nameToFind) {
+                const cell = twoDimensionalArray[row][col];
+                if (typeof cell === 'string' && cell.trim().toLowerCase() === target) {
                     return {row: row, col: col};
                 }
             }
         }
+        return undefined;
+    }
 
+    function findValueByLabelInBlock(twoDimensionalArray, charRow, charCol, labelToFind) {
+        const maxSearchRows = Math.min(twoDimensionalArray.length, charRow + 35);
+        const targetLabel = labelToFind.toLowerCase();
+        for (let r = charRow; r < maxSearchRows; r++) {
+            const cellVal = twoDimensionalArray[r] && twoDimensionalArray[r][charCol];
+            if (typeof cellVal === 'string' && cellVal.trim().toLowerCase().includes(targetLabel)) {
+                return twoDimensionalArray[r][charCol + 1];
+            }
+        }
         return undefined;
     }
 
@@ -37,7 +53,18 @@ if (document?.getElementById('sheet-data')) {
             return defaultValue;
         }
 
-        return twoDimensionalArray[characterCoords.row + 21][characterCoords.col + 1].split('gp')[0].trim();
+        let rawVal = findValueByLabelInBlock(twoDimensionalArray, characterCoords.row, characterCoords.col, 'total cost');
+        if (rawVal === undefined && twoDimensionalArray[characterCoords.row + 21]) {
+            rawVal = twoDimensionalArray[characterCoords.row + 21][characterCoords.col + 1];
+        }
+
+        if (rawVal === undefined || rawVal === null) {
+            return defaultValue;
+        }
+
+        const strVal = String(rawVal).replace(/,/g, '');
+        const match = strVal.match(/[-+]?\d*\.?\d+/);
+        return match ? match[0] : defaultValue;
     }
 
     function findHealingForCharacterInSheet(twoDimensionalArray, nameToFind, defaultValue) {
@@ -46,8 +73,26 @@ if (document?.getElementById('sheet-data')) {
             return defaultValue;
         }
 
-        const rollComponents = twoDimensionalArray[characterCoords.row + 5][characterCoords.col + 1].trim().split('d');
-        return rollComponents.length === 2 ? rollXdYSum(rollComponents[0], rollComponents[1]) : defaultValue;
+        let rawVal = findValueByLabelInBlock(twoDimensionalArray, characterCoords.row, characterCoords.col, 'healed');
+        if (rawVal === undefined && twoDimensionalArray[characterCoords.row + 5]) {
+            rawVal = twoDimensionalArray[characterCoords.row + 5][characterCoords.col + 1];
+        }
+
+        if (rawVal === undefined || rawVal === null) {
+            return defaultValue;
+        }
+
+        const strVal = String(rawVal).trim().toLowerCase();
+        if (strVal === '0' || strVal === '0d3' || strVal === '') {
+            return 0;
+        }
+
+        const match = strVal.match(/^(\d+)\s*d\s*(\d+)/i);
+        if (match) {
+            return rollXdYSum(match[1], match[2]);
+        }
+
+        return defaultValue;
     }
 
     function onPasteTextArea() {
@@ -62,8 +107,13 @@ if (document?.getElementById('sheet-data')) {
                 const actor = partyActors[i];
                 if (actor) {
                     const baseActorName = actor.innerText.split('(')[0].trim();
-                    characters[i].value = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
-                    heals[i].value = findHealingForCharacterInSheet(sheetDataGrid, baseActorName, 0);
+                    const upkeepVal = findUpkeepForCharacterInSheet(sheetDataGrid, baseActorName, '');
+                    const healVal = findHealingForCharacterInSheet(sheetDataGrid, baseActorName, 0);
+                    characters[i].value = upkeepVal;
+                    heals[i].value = healVal;
+                    if (upkeepVal === '' && findCharacterInSheet(sheetDataGrid, baseActorName) === undefined) {
+                        characters[i].placeholder = 'Not found in sheet';
+                    }
                     console.log('Setting upkeep for ' + baseActorName + ' to ' + characters[i].value + ' and heal to ' + heals[i].value);
                 }
             }
@@ -160,9 +210,9 @@ if (document?.getElementById('sheet-data')) {
                         // *** Retainer Healing and Report ***
                         // Process healing for retainers ONLY IF healValue > 0.
                         if (healValue > 0) { 
-                            const baseActorName = actor.name.split('(')[0].trim();
+                            const baseActorName = actor.name.split('(')[0].trim().toLowerCase();
                             for (const retainer of retainersInGame) {
-                                if (retainer.name.includes(`(${baseActorName})`)) {
+                                if (retainer.name.toLowerCase().includes(`(${baseActorName})`)) {
                                     // Check retainer's HP before healing for the report check
                                     const retainerCurrentHP = retainer.system.hp.value;
                                     const retainerMaxHP = retainer.system.hp.max;
@@ -192,3 +242,4 @@ if (document?.getElementById('sheet-data')) {
     });
     dialog.render(true);
 }
+
