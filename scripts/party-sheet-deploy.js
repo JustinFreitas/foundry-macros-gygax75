@@ -37,12 +37,16 @@ if (!leaderToken) {
                 <label style="flex: 1;">Single File Formation</label>
                 <input type="checkbox" name="singleFile" style="flex: 0 0 20px;">
             </div>
+            <div class="form-group" style="display: flex; align-items: center; margin-bottom: 10px;">
+                <label style="flex: 1;">Keep Party Token</label>
+                <input type="checkbox" name="keepPartyToken" style="flex: 0 0 20px;">
+            </div>
         `,
         buttons: [
-            { action: "north", label: "North", default: true, callback: (event, button, dialog) => deploy(0, -1, $(dialog.element).find('[name="singleFile"]')[0].checked) },
-            { action: "east",  label: "East",  callback: (event, button, dialog) => deploy(1, 0,  $(dialog.element).find('[name="singleFile"]')[0].checked) },
-            { action: "south", label: "South", callback: (event, button, dialog) => deploy(0, 1,  $(dialog.element).find('[name="singleFile"]')[0].checked) },
-            { action: "west",  label: "West",  callback: (event, button, dialog) => deploy(-1, 0, $(dialog.element).find('[name="singleFile"]')[0].checked) }
+            { action: "north", label: "North", default: true, callback: (event, button, dialog) => deploy(0, -1, $(dialog.element).find('[name="singleFile"]')[0].checked, $(dialog.element).find('[name="keepPartyToken"]')[0].checked) },
+            { action: "east",  label: "East",  callback: (event, button, dialog) => deploy(1, 0,  $(dialog.element).find('[name="singleFile"]')[0].checked, $(dialog.element).find('[name="keepPartyToken"]')[0].checked) },
+            { action: "south", label: "South", callback: (event, button, dialog) => deploy(0, 1,  $(dialog.element).find('[name="singleFile"]')[0].checked, $(dialog.element).find('[name="keepPartyToken"]')[0].checked) },
+            { action: "west",  label: "West",  callback: (event, button, dialog) => deploy(-1, 0, $(dialog.element).find('[name="singleFile"]')[0].checked, $(dialog.element).find('[name="keepPartyToken"]')[0].checked) }
         ]
     });
     dialog.render(true);
@@ -58,7 +62,7 @@ function getPartyActors() {
         });
 }
 
-async function deploy(dirX, dirY, isSingleFile) {
+async function deploy(dirX, dirY, isSingleFile, keepPartyToken) {
     const leaderToken = canvas.tokens.controlled[0];
     const { x: sX, y: sY, width: lW, height: lH } = leaderToken.document;
     const gridScale = canvas.grid.size;
@@ -152,8 +156,32 @@ async function deploy(dirX, dirY, isSingleFile) {
         return null;
     };
 
+    if (keepPartyToken) {
+        let next = null;
+        for (const cell of rank) {
+            const straight = { gx: cell.gx + heading.x, gy: cell.gy + heading.y };
+            if (!occupied.has(`${straight.gx},${straight.gy}`) &&
+                canStep(cell.gx, cell.gy, straight.gx, straight.gy)) {
+                next = { ...straight, step: heading };
+                break;
+            }
+        }
+        if (!next) {
+            for (const cell of rank) {
+                next = stepFrom(cell, heading);
+                if (next) break;
+            }
+        }
+        if (next) {
+            place(next.gx, next.gy);
+            rank = [{ gx: next.gx, gy: next.gy }];
+            heading = next.step;
+        }
+    }
+
     // Grow the trail one rank at a time.
-    while (ordered.length < partyActors.length) {
+    const targetLength = partyActors.length + (keepPartyToken ? 1 : 0);
+    while (ordered.length < targetLength) {
         // DOUBLE FILE: complete the current rank two-abreast before stepping back.
         // The partner sits perpendicular to the heading; we only ever add one, so
         // single file (skipping this) stays strictly one cell wide.
@@ -196,14 +224,19 @@ async function deploy(dirX, dirY, isSingleFile) {
         heading = next.step;
     }
 
-    const toCreate = partyActors.slice(0, ordered.length).map((actor, i) => {
-        const cell = ordered[i];
+    const startIndex = keepPartyToken ? 1 : 0;
+    const placedCells = ordered.slice(startIndex);
+
+    const toCreate = partyActors.slice(0, placedCells.length).map((actor, i) => {
+        const cell = placedCells[i];
         const data = actor.prototypeToken.toObject();
         return { ...data, actorId: actor.id, x: cell.gx * gridScale, y: cell.gy * gridScale, hidden: false };
     });
 
     await canvas.scene.createEmbeddedDocuments("Token", toCreate);
-    await leaderToken.document.delete();
+    if (!keepPartyToken) {
+        await leaderToken.document.delete();
+    }
 
     const shortfall = partyActors.length - toCreate.length;
     if (shortfall > 0) {
