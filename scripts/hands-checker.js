@@ -44,8 +44,8 @@
         if (sackCount >= 2) {
             // Found 2 or more actively used sacks. Now check for a shield.
             const equippedShield = actor.items.find(item => 
-                // Check if name includes "shield" AND if it is currently marked as equipped
-                item.name.toLowerCase().includes(SHIELD_NAME_FRAGMENT) && item.system.equipped
+                (item.type === "armor" && (item.system.type === "shield" || item.name.toLowerCase().includes(SHIELD_NAME_FRAGMENT))) && 
+                item.system.equipped
             );
 
             if (equippedShield) {

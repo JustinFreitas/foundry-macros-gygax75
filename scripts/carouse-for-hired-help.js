@@ -11,6 +11,11 @@ const WEAPONS_TABLE = {
     "Halfling": ["Sword", "Shortbow", "Dagger", "Hand Axe", "Sling"],
     "Gnome": ["Warhammer", "Sling", "Shortbow", "Dagger", "Hand Axe"],
     "Wood Elf": ["Shortbow", "Spear", "Sword", "Sling", "Dagger"],
+    "Barbarian": ["Two-Handed Sword", "Battle Axe", "Spear", "Hand Axe", "Longbow"],
+    "Druid": ["Staff", "Club", "Sling", "Dagger"],
+    "Half-Orc": ["Sword", "Battle Axe", "Club", "Crossbow", "Spear"],
+    "Knight": ["Sword", "Lance", "Mace", "Warhammer"],
+    "Warden": ["Sword", "Longbow", "Spear", "Hand Axe"],
     "Normal Human": ["Club", "Dagger", "Spear", "Short Staff"]
 };
 
@@ -92,7 +97,7 @@ function getWeekNumber(date) {
 }
 
 function getWeekID() {
-    if (typeof SimpleCalendar !== 'undefined') {
+    if (typeof SimpleCalendar?.api !== 'undefined') {
         const timestamp = SimpleCalendar.api.timestamp();
         const dateStr = SimpleCalendar.api.formatTimestamp(timestamp, 'M/D/YYYY');
         const parts = dateStr.split('/');
@@ -107,7 +112,7 @@ function getWeekID() {
 }
 
 function getGameDateString() {
-    if (typeof SimpleCalendar !== 'undefined') {
+    if (typeof SimpleCalendar?.api !== 'undefined') {
         const timestamp = SimpleCalendar.api.timestamp();
         return SimpleCalendar.api.formatTimestamp(timestamp, 'MM/DD/YYYY');
     }
@@ -146,7 +151,7 @@ async function getReputationPenalty(pcActor) {
 }
 
 async function addReputationEffect(pcActor, penaltyAmount) {
-    const timestamp = typeof SimpleCalendar !== 'undefined' ? SimpleCalendar.api.timestamp() : Date.now();
+    const timestamp = typeof SimpleCalendar?.api !== 'undefined' ? SimpleCalendar.api.timestamp() : Date.now();
     const effectData = {
         name: "Bad Reputation",
         icon: "icons/svg/downgrade.svg",
@@ -600,7 +605,7 @@ async function refreshUI(html, pcActor, state) {
     const badReputation = await getReputationPenalty(pcActor);
     
     // 1. PC Stats
-    const cha = pcActor.system.scores?.cha?.value || pcActor.system.abilities?.cha?.value || 10;
+    const cha = pcActor.system.scores?.cha?.value || 10;
     const maxRetainers = getMaxRetainers(cha);
     const reactionMod = getCharismaModifier(cha);
     const basePCName = pcActor.name.split('(')[0].trim();

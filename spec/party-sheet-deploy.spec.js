@@ -146,7 +146,7 @@ describe("Party Sheet Deploy Macro", () => {
         game.actors.filter.mockReturnValue(actors);
 
         eval(macroScript);
-        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: true }]) };
+        const mockHtml = { find: jest.fn((selector) => [{ checked: selector.includes("singleFile") }]) };
         await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         // Single file North facing: (500,500) -> (500,600) -> (500,700)
@@ -364,7 +364,7 @@ describe("Party Sheet Deploy Macro", () => {
         }];
 
         eval(macroScript);
-        const mockHtml = { find: jest.fn().mockReturnValue([{ checked: true }]) }; // single file
+        const mockHtml = { find: jest.fn((selector) => [{ checked: selector.includes("singleFile") }]) }; // single file
         await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "west").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();

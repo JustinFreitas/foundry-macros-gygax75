@@ -418,7 +418,7 @@ function openConsumptionDialog(unitsFed) {
     const { DialogV2 } = foundry.applications.api;
     const dialog = new DialogV2({
         window: { title: `${actor.name}'s Consumables` },
-        position: { width: dialogWidth },
+        position: { width: dialogWidth, height: "auto" },
         classes: ["ose", "dialog", "resizable"],
         content: content,
         buttons: [
@@ -547,7 +547,7 @@ const preCheckContent = `
 const { DialogV2 } = foundry.applications.api;
 const dialog = new DialogV2({
     window: { title: `${actor.name}'s Daily Foraging Check` },
-    position: { width: 400 },
+    position: { width: 400, height: "auto" },
     classes: ["ose", "dialog", "resizable"],
     content: preCheckContent,
     buttons: [

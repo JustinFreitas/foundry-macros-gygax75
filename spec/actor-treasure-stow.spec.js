@@ -190,8 +190,8 @@ describe('actor-treasure-stow.js', () => {
                 expect(unitValueDensity("GP", 2)).toBe(0.5);
             });
 
-            it('treats weightless valued items as their raw gp value', () => {
-                expect(unitValueDensity("Gem", 0)).toBe(100);
+            it('treats weightless valued items as having Infinite density to prioritize them unconditionally', () => {
+                expect(unitValueDensity("Weightless Ring", 0, 100)).toBe(Infinity);
             });
 
             it('returns 0 for unknown value', () => {
@@ -364,6 +364,24 @@ describe('actor-treasure-stow.js', () => {
                 container,
                 item("g1", "Gem", 1, 1),
                 item("g2", "Gem", 1, 3),
+            ]);
+
+            const result = await consolidateContainer(actor, container);
+
+            expect(result).toBe(false);
+            expect(actor.updateEmbeddedDocuments).not.toHaveBeenCalled();
+            expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+        });
+
+        it('does NOT merge same-name items of different cost (value preserved)', async () => {
+            const i1 = item("g1", "Gem", 1, 1);
+            i1.system.cost = 100;
+            const i2 = item("g2", "Gem", 1, 1);
+            i2.system.cost = 500;
+            const actor = makeActor([
+                container,
+                i1,
+                i2,
             ]);
 
             const result = await consolidateContainer(actor, container);
