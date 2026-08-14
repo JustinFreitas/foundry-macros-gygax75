@@ -8,6 +8,7 @@ const {
     compareTreasurePriority,
     compareFillableContainers,
     consolidateContainer,
+    isLootableItem,
     COIN_GP_VALUE,
 } = require('../scripts/lib/treasure-stow-helpers.js');
 
@@ -417,6 +418,35 @@ describe('actor-treasure-stow.js', () => {
             expect(result).toBe(false);
             expect(actor.updateEmbeddedDocuments).not.toHaveBeenCalled();
             expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('isLootableItem', () => {
+        it('returns false for null or undefined', () => {
+            expect(isLootableItem(null)).toBe(false);
+            expect(isLootableItem(undefined)).toBe(false);
+        });
+
+        it('returns false for non-physical types (spell, ability)', () => {
+            expect(isLootableItem({ type: 'spell', system: { quantity: { value: 1 } } })).toBe(false);
+            expect(isLootableItem({ type: 'ability', system: { quantity: { value: 1 } } })).toBe(false);
+        });
+
+        it('returns true for physical item types (item, weapon, armor, container)', () => {
+            expect(isLootableItem({ type: 'item', system: { quantity: { value: 1 } } })).toBe(true);
+            expect(isLootableItem({ type: 'weapon', system: { quantity: { value: 1 } } })).toBe(true);
+            expect(isLootableItem({ type: 'armor', system: { quantity: { value: 1 } } })).toBe(true);
+            expect(isLootableItem({ type: 'container', system: { quantity: { value: 1 } } })).toBe(true);
+        });
+
+        it('returns false when quantity is 0 or negative', () => {
+            expect(isLootableItem({ type: 'item', system: { quantity: { value: 0 } } })).toBe(false);
+            expect(isLootableItem({ type: 'weapon', system: { quantity: { value: -1 } } })).toBe(false);
+        });
+
+        it('returns true when quantity is omitted or undefined (defaults to 1)', () => {
+            expect(isLootableItem({ type: 'weapon', system: {} })).toBe(true);
+            expect(isLootableItem({ type: 'armor' })).toBe(true);
         });
     });
 });

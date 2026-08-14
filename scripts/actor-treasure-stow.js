@@ -151,13 +151,25 @@ async function consolidateContainer(actor, container) {
         if (items.length > 1) {
             consolidated = true;
             const firstItem = items[0];
-            const totalQuantity = items.reduce((sum, item) => sum + item.system.quantity.value, 0);
+            const totalQuantity = items.reduce((sum, item) => sum + (item.system?.quantity?.value ?? 1), 0);
             await actor.updateEmbeddedDocuments("Item", [{ _id: firstItem.id, "system.quantity.value": totalQuantity }]);
             const idsToDelete = items.slice(1).map(item => item.id);
             await actor.deleteEmbeddedDocuments("Item", idsToDelete);
         }
     }
     return consolidated;
+}
+
+/**
+ * Test whether an item on an Item Pile is a lootable physical item.
+ * Excludes non-physical Foundry documents like spells and abilities,
+ * and requires a quantity greater than zero.
+ */
+function isLootableItem(item) {
+    if (!item) return false;
+    if (item.type === "spell" || item.type === "ability") return false;
+    const qty = item.system?.quantity?.value ?? 1;
+    return qty > 0;
 }
 // <<< END SHARED: treasure-stow-helpers >>>
 
@@ -266,8 +278,8 @@ async function stowTreasure(fillToAbsoluteMax) {
     }
 
     itemPileActors.sort((a, b) => {
-        const quantA = a.items.filter(i => i.system.treasure === true).reduce((sum, i) => sum + i.system.quantity.value, 0);
-        const quantB = b.items.filter(i => i.system.treasure === true).reduce((sum, i) => sum + i.system.quantity.value, 0);
+        const quantA = a.items.filter(isLootableItem).reduce((sum, i) => sum + (i.system.quantity?.value ?? 1), 0);
+        const quantB = b.items.filter(isLootableItem).reduce((sum, i) => sum + (i.system.quantity?.value ?? 1), 0);
         return quantB - quantA;
     });
     report.pileOrder = itemPileActors.map(a => a.name);
@@ -378,10 +390,10 @@ async function stowTreasure(fillToAbsoluteMax) {
 
         let itemsMovedForCharacter = false;
 
-        // --- Pool All Treasure Across All Piles ---
+        // --- Pool All Items Across All Piles ---
         const pooledTreasure = [];
         for (const itemPileActor of itemPileActors) {
-            const pileTreasure = itemPileActor.items.filter(item => item.system.treasure === true);
+            const pileTreasure = itemPileActor.items.filter(isLootableItem);
             for (const item of pileTreasure) {
                 pooledTreasure.push({ pile: itemPileActor, item: item });
             }
@@ -389,8 +401,8 @@ async function stowTreasure(fillToAbsoluteMax) {
 
         // Sort the entire pool by density
         pooledTreasure.sort((a, b) => compareTreasurePriority(
-            { name: a.item.name, weight: a.item.system.weight, cost: a.item.system.cost, isTreasure: true },
-            { name: b.item.name, weight: b.item.system.weight, cost: b.item.system.cost, isTreasure: true }
+            { name: a.item.name, weight: a.item.system.weight, cost: a.item.system.cost, isTreasure: Boolean(a.item.system.treasure) },
+            { name: b.item.name, weight: b.item.system.weight, cost: b.item.system.cost, isTreasure: Boolean(b.item.system.treasure) }
         ));
 
         const pileTransferLogs = new Map();
@@ -411,10 +423,10 @@ async function stowTreasure(fillToAbsoluteMax) {
 
                 const { pile, item } = poolEntry;
                 const itemOnPile = pile.items.get(item.id);
-                if (!itemOnPile || itemOnPile.system.quantity.value === 0) continue;
+                if (!itemOnPile || (itemOnPile.system.quantity?.value ?? 1) === 0) continue;
 
                 const itemWeight = itemOnPile.system.weight ?? 0;
-                let quantityToMove = itemOnPile.system.quantity.value;
+                let quantityToMove = itemOnPile.system.quantity?.value ?? 1;
 
                 if (itemWeight > 0) {
                     const afford = Math.min(Math.floor(containerData.remaining / itemWeight), Math.floor(actorRemainingCapacity / itemWeight));
@@ -478,10 +490,10 @@ async function stowTreasure(fillToAbsoluteMax) {
                 
                 const { pile, item } = poolEntry;
                 const itemOnPile = pile.items.get(item.id);
-                if (!itemOnPile || itemOnPile.system.quantity.value === 0) continue;
+                if (!itemOnPile || (itemOnPile.system.quantity?.value ?? 1) === 0) continue;
 
                 const itemWeight = itemOnPile.system.weight ?? 0;
-                let quantityToMove = itemOnPile.system.quantity.value;
+                let quantityToMove = itemOnPile.system.quantity?.value ?? 1;
 
                 if (itemWeight > 0) {
                     const afford = Math.floor(actorRemainingCapacity / itemWeight);
@@ -543,12 +555,12 @@ async function stowTreasure(fillToAbsoluteMax) {
 
     // --- Check remaining pile items ---
     for (const pile of itemPileActors) {
-        const remainingTreasure = pile.items.filter(i => i.system.treasure === true);
-        if (remainingTreasure.length === 0) {
-            report.pileSummary.push(`<p><strong>${pile.name}:</strong> All treasure has been taken.</p>`);
+        const remainingItems = pile.items.filter(isLootableItem);
+        if (remainingItems.length === 0) {
+            report.pileSummary.push(`<p><strong>${pile.name}:</strong> All items have been taken.</p>`);
         } else {
-            const remainingItemsList = remainingTreasure.map(i => `<li>${i.system.quantity.value} x ${i.name}</li>`);
-            report.pileSummary.push(`<p><strong>${pile.name}:</strong> The following treasure remains:</p><ul>${remainingItemsList.join('')}</ul>`);
+            const remainingItemsList = remainingItems.map(i => `<li>${i.system.quantity?.value ?? 1} x ${i.name}</li>`);
+            report.pileSummary.push(`<p><strong>${pile.name}:</strong> The following items remain:</p><ul>${remainingItemsList.join('')}</ul>`);
         }
     }
 

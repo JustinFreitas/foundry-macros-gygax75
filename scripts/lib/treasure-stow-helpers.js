@@ -165,13 +165,25 @@ async function consolidateContainer(actor, container) {
         if (items.length > 1) {
             consolidated = true;
             const firstItem = items[0];
-            const totalQuantity = items.reduce((sum, item) => sum + item.system.quantity.value, 0);
+            const totalQuantity = items.reduce((sum, item) => sum + (item.system?.quantity?.value ?? 1), 0);
             await actor.updateEmbeddedDocuments("Item", [{ _id: firstItem.id, "system.quantity.value": totalQuantity }]);
             const idsToDelete = items.slice(1).map(item => item.id);
             await actor.deleteEmbeddedDocuments("Item", idsToDelete);
         }
     }
     return consolidated;
+}
+
+/**
+ * Test whether an item on an Item Pile is a lootable physical item.
+ * Excludes non-physical Foundry documents like spells and abilities,
+ * and requires a quantity greater than zero.
+ */
+function isLootableItem(item) {
+    if (!item) return false;
+    if (item.type === "spell" || item.type === "ability") return false;
+    const qty = item.system?.quantity?.value ?? 1;
+    return qty > 0;
 }
 // <<< END SHARED: treasure-stow-helpers >>>
 
@@ -188,5 +200,6 @@ if (typeof module !== "undefined" && module.exports) {
         compareTreasurePriority,
         compareFillableContainers,
         consolidateContainer,
+        isLootableItem,
     };
 }
