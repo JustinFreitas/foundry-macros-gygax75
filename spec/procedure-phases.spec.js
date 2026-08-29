@@ -15,10 +15,41 @@ const UNPACKED = path.resolve(__dirname, "../../_qe-macro-sync/unpacked");
 
 // The packed world macro names (source of truth for what runProcedure can call).
 const worldMacroNames = new Set(
-    fs
-        .readdirSync(UNPACKED)
-        .filter((f) => f.endsWith(".json"))
-        .map((f) => JSON.parse(fs.readFileSync(path.join(UNPACKED, f), "utf8")).name)
+    fs.existsSync(UNPACKED)
+        ? fs
+              .readdirSync(UNPACKED)
+              .filter((f) => f.endsWith(".json"))
+              .map((f) => JSON.parse(fs.readFileSync(path.join(UNPACKED, f), "utf8")).name)
+        : [
+              "Clear Party Sheet",
+              "Container Checker",
+              "Container Checker with Mounts",
+              "Dungeon Best Abilities",
+              "Duty XP",
+              "Duty XP Reset",
+              "Expedition Provisions",
+              "Expired Ration Removal - Party",
+              "Found Treasure Check - Party & Mounts",
+              "Gem Values",
+              "Haggling",
+              "Jewellery Value",
+              "Light Turns Remaining",
+              "Mount Speed Update",
+              "Party Found to Pile",
+              "Party Room Trap Check",
+              "Party Secret Doors Check",
+              "Pay Party Retainers",
+              "Ration Spoiling",
+              "Riders Encumbrance Reset - Party",
+              "Riders Encumbrance Update",
+              "Show Party Sheet",
+              "Speed Report",
+              "Spiked Door Check",
+              "Treasure Split",
+              "Treasure Stow",
+              "Upkeep Costs",
+              "Wandering Monster Check"
+          ]
 );
 
 // New macros that this change packs alongside the runners — treat as available.
