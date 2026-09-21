@@ -21,7 +21,7 @@ class MockDialogV2 {
     }
 }
 
-describe("Quick Scene Swapper Macro", () => {
+describe("Quick Scene Swapper Macro (Unified V2)", () => {
     let mockPack;
     let mockScenes;
     let mockFolders;
@@ -48,7 +48,7 @@ describe("Quick Scene Swapper Macro", () => {
         };
         global.Hooks = mockHooks;
 
-        const importedScene = {
+        const importedStonefast = {
             _id: 'sc01234567890123',
             id: 'sc01234567890123',
             name: 'Stonefast: Level 1',
@@ -60,15 +60,97 @@ describe("Quick Scene Swapper Macro", () => {
                 global.canvas.scene = this;
             }),
             update: jest.fn().mockResolvedValue(true),
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            }),
             createThumbnail: jest.fn().mockResolvedValue({ thumb: 'data:image/webp;base64,mockthumb' })
         };
 
+        const importedB2Caves = {
+            _id: 'DftBS0oXPmkEinpe',
+            id: 'DftBS0oXPmkEinpe',
+            name: 'B2 Caves of Chaos',
+            active: false,
+            thumb: 'worlds/old-school-essentials/assets/scenes/DftBS0oXPmkEinpe-thumb.webp',
+            folder: null,
+            activate: jest.fn().mockImplementation(async function() {
+                this.active = true;
+                global.canvas.scene = this;
+            }),
+            update: jest.fn().mockResolvedValue(true),
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            }),
+            createThumbnail: jest.fn().mockResolvedValue({ thumb: 'mockthumb' })
+        };
+
+        const importedB2Keep = {
+            _id: 'b2Keep1234567890',
+            id: 'b2Keep1234567890',
+            name: 'B2 The Keep',
+            active: false,
+            thumb: 'worlds/old-school-essentials/assets/scenes/b2Keep-thumb.webp',
+            folder: null,
+            activate: jest.fn().mockImplementation(async function() {
+                this.active = true;
+                global.canvas.scene = this;
+            }),
+            update: jest.fn().mockResolvedValue(true),
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            }),
+            createThumbnail: jest.fn().mockResolvedValue({ thumb: 'mockthumb' })
+        };
+
         mockScenes = [
-            { _id: 'hub1234567890123', id: 'hub1234567890123', name: 'Ingot Inn - Threshold', active: true, folder: null }
+            {
+                _id: 'hub1234567890123',
+                id: 'hub1234567890123',
+                name: 'Ingot Inn - Threshold',
+                active: true,
+                folder: null,
+                activate: jest.fn().mockResolvedValue(true)
+            },
+            {
+                _id: 'hub2234567890123',
+                id: 'hub2234567890123',
+                name: 'Gemthrone Valley',
+                active: false,
+                folder: null,
+                activate: jest.fn().mockResolvedValue(true)
+            },
+            {
+                _id: 'hub4234567890123',
+                id: 'hub4234567890123',
+                name: 'Combat',
+                active: false,
+                folder: null,
+                activate: jest.fn().mockResolvedValue(true)
+            },
+            {
+                _id: 'hub5234567890123',
+                id: 'hub5234567890123',
+                name: 'TotM Combat w/ OSE Rules',
+                active: false,
+                folder: null,
+                activate: jest.fn().mockResolvedValue(true)
+            }
         ];
 
         mockFolders = [
-            { id: 'parentSites12345', name: 'Justin Sites', type: 'Scene', folder: null }
+            {
+                id: 'parentSites12345',
+                name: 'Justin Sites',
+                type: 'Scene',
+                folder: null,
+                delete: jest.fn().mockImplementation(async function() {
+                    const idx = mockFolders.indexOf(this);
+                    if (idx !== -1) mockFolders.splice(idx, 1);
+                })
+            }
         ];
 
         const compFolders = [
@@ -88,6 +170,12 @@ describe("Quick Scene Swapper Macro", () => {
                 name: 'B2 Caves of Chaos',
                 folder: 'cfldB2Borderlands',
                 flags: { gygax75: { module: 'B2 Keep on the Borderlands' } }
+            }],
+            ['b2Keep1234567890', {
+                _id: 'b2Keep1234567890',
+                name: 'B2 The Keep',
+                folder: 'cfldB2Borderlands',
+                flags: { gygax75: { module: 'B2 Keep on the Borderlands' } }
             }]
         ]);
 
@@ -96,7 +184,22 @@ describe("Quick Scene Swapper Macro", () => {
             locked: true,
             folders: compFolders,
             getIndex: jest.fn().mockResolvedValue(compIndex),
-            getDocument: jest.fn()
+            configure: jest.fn().mockImplementation(async ({ locked }) => {
+                mockPack.locked = locked;
+            }),
+            getDocument: jest.fn().mockImplementation(async (id) => {
+                return {
+                    _id: id,
+                    delete: jest.fn().mockResolvedValue(true)
+                };
+            }),
+            importDocument: jest.fn().mockResolvedValue(true)
+        };
+
+        const sceneDict = {
+            'sc01234567890123': importedStonefast,
+            'DftBS0oXPmkEinpe': importedB2Caves,
+            'b2Keep1234567890': importedB2Keep
         };
 
         global.game = {
@@ -107,9 +210,10 @@ describe("Quick Scene Swapper Macro", () => {
                 get: jest.fn((id) => mockScenes.find(s => s._id === id || s.id === id)),
                 getName: jest.fn((name) => mockScenes.find(s => s.name === name)),
                 importFromCompendium: jest.fn().mockImplementation(async (pack, id, { folder }, { keepId }) => {
-                    importedScene.folder = { id: folder };
-                    mockScenes.push(importedScene);
-                    return importedScene;
+                    const sceneToImport = sceneDict[id];
+                    sceneToImport.folder = { id: folder, name: mockFolders.find(f => f.id === folder)?.name };
+                    mockScenes.push(sceneToImport);
+                    return sceneToImport;
                 }),
                 filter: (fn) => mockScenes.filter(fn),
                 find: (fn) => mockScenes.find(fn),
@@ -128,7 +232,14 @@ describe("Quick Scene Swapper Macro", () => {
 
         global.Folder = {
             create: jest.fn().mockImplementation(async (data) => {
-                const newFolder = { id: 'newFolderId12345', ...data };
+                const newFolder = {
+                    id: 'newFolderId_' + (data.name || 'fld'),
+                    ...data,
+                    delete: jest.fn().mockImplementation(async function() {
+                        const idx = mockFolders.indexOf(this);
+                        if (idx !== -1) mockFolders.splice(idx, 1);
+                    })
+                };
                 mockFolders.push(newFolder);
                 return newFolder;
             })
@@ -151,7 +262,7 @@ describe("Quick Scene Swapper Macro", () => {
         const dlg = MockDialogV2.instances[0];
 
         expect(dlg.config.classes).toEqual(["ose", "dialog"]);
-        expect(dlg.config.position).toEqual({ width: 660, height: 560 });
+        expect(dlg.config.position).toEqual({ width: 680, height: 580 });
         expect(dlg.config.window.title).toBe("Quick Scene Swapper");
         expect(dlg.render).toHaveBeenCalledWith({ force: true });
     });
@@ -167,7 +278,7 @@ describe("Quick Scene Swapper Macro", () => {
         expect(content).toContain("B2 Caves of Chaos");
         expect(content).toContain("Stonefast");
         expect(content).toContain("Stonefast: Level 1");
-        expect(content).toContain("Active in sidebar: <i>Ingot Inn - Threshold</i>");
+        expect(content).toContain("Active in sidebar: <i>Ingot Inn - Threshold");
     });
 
     test("activates compendium scene, creates world folder nested under 'Justin Sites' with compendium color, and self-heals thumbnail", async () => {
@@ -195,7 +306,7 @@ describe("Quick Scene Swapper Macro", () => {
         expect(global.game.scenes.importFromCompendium).toHaveBeenCalledWith(
             mockPack,
             'sc01234567890123',
-            { folder: 'newFolderId12345' },
+            expect.objectContaining({ folder: expect.stringContaining('Stonefast') }),
             { keepId: true }
         );
 
@@ -214,36 +325,136 @@ describe("Quick Scene Swapper Macro", () => {
         expect(dlg.close).toHaveBeenCalled();
     });
 
-    test("activates existing world scene directly without re-importing", async () => {
-        // Pre-load B2 into world
-        const existingB2 = {
+    test("batch loads all scenes for a module ('Swap Everything in Module')", async () => {
+        eval(macroScript);
+        await new Promise(r => setTimeout(r, 50));
+
+        const dlg = MockDialogV2.instances[0];
+        const loadModBtn = dlg.element.querySelector('.btn-load-module[data-module="B2 Keep on the Borderlands"]');
+        expect(loadModBtn).not.toBeNull();
+        expect(loadModBtn.textContent).toContain("Load All (2)");
+
+        loadModBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 100));
+
+        // Both B2 Caves and B2 Keep imported
+        expect(global.game.scenes.importFromCompendium).toHaveBeenCalledWith(
+            mockPack,
+            'DftBS0oXPmkEinpe',
+            expect.anything(),
+            { keepId: true }
+        );
+        expect(global.game.scenes.importFromCompendium).toHaveBeenCalledWith(
+            mockPack,
+            'b2Keep1234567890',
+            expect.anything(),
+            { keepId: true }
+        );
+        expect(global.ui.notifications.info).toHaveBeenCalledWith(
+            expect.stringContaining("Imported 2 scenes for [B2 Keep on the Borderlands]")
+        );
+
+        // Dialog stayed open and re-rendered view with Offload All button
+        const offloadModBtn = dlg.element.querySelector('.btn-offload-module[data-module="B2 Keep on the Borderlands"]');
+        expect(offloadModBtn).not.toBeNull();
+        expect(offloadModBtn.textContent).toContain("Offload All (2)");
+    });
+
+    test("batch offloads all scenes for a module and cleans up empty world folder", async () => {
+        // Pre-load B2 scenes into world
+        const b2Folder = {
+            id: 'fldB2Borderlands',
+            name: 'B2 Keep on the Borderlands',
+            type: 'Scene',
+            folder: 'parentSites12345',
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockFolders.indexOf(this);
+                if (idx !== -1) mockFolders.splice(idx, 1);
+            })
+        };
+        mockFolders.push(b2Folder);
+
+        const b2Caves = {
             _id: 'DftBS0oXPmkEinpe',
             id: 'DftBS0oXPmkEinpe',
             name: 'B2 Caves of Chaos',
             active: false,
-            thumb: 'worlds/old-school-essentials/assets/scenes/DftBS0oXPmkEinpe-thumb.webp',
-            folder: { id: 'fldB2World123456' },
-            activate: jest.fn().mockResolvedValue(true),
-            update: jest.fn().mockResolvedValue(true),
-            createThumbnail: jest.fn()
+            folder: b2Folder,
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            })
         };
-        mockScenes.push(existingB2);
-        mockFolders.push({ id: 'fldB2World123456', name: 'B2 Keep on the Borderlands', type: 'Scene', folder: 'parentSites12345' });
+        const b2Keep = {
+            _id: 'b2Keep1234567890',
+            id: 'b2Keep1234567890',
+            name: 'B2 The Keep',
+            active: false,
+            folder: b2Folder,
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            })
+        };
+        mockScenes.push(b2Caves, b2Keep);
 
         eval(macroScript);
         await new Promise(r => setTimeout(r, 50));
 
         const dlg = MockDialogV2.instances[0];
-        const activateBtn = dlg.element.querySelector('.btn-activate-scene[data-scene-id="DftBS0oXPmkEinpe"]');
-        expect(activateBtn).not.toBeNull();
-        expect(activateBtn.textContent.trim()).toBe("Switch To");
+        const offloadModBtn = dlg.element.querySelector('.btn-offload-module[data-module="B2 Keep on the Borderlands"]');
+        expect(offloadModBtn).not.toBeNull();
 
-        activateBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        offloadModBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         await new Promise(r => setTimeout(r, 100));
 
-        expect(global.game.scenes.importFromCompendium).not.toHaveBeenCalled();
-        expect(existingB2.activate).toHaveBeenCalled();
-        expect(existingB2.createThumbnail).not.toHaveBeenCalled(); // Thumb is already valid
-        expect(dlg.close).toHaveBeenCalled();
+        expect(b2Caves.delete).toHaveBeenCalled();
+        expect(b2Keep.delete).toHaveBeenCalled();
+        expect(b2Folder.delete).toHaveBeenCalled(); // Empty folder cleaned up
+        expect(global.ui.notifications.info).toHaveBeenCalledWith(
+            expect.stringContaining("Offloaded 2 scenes from [B2 Keep on the Borderlands]")
+        );
+    });
+
+    test("sweeps all non-permanent scenes from world when Sweep World is clicked", async () => {
+        // Add a temporary scene to the world
+        const tempScene = {
+            _id: 'sc01234567890123',
+            id: 'sc01234567890123',
+            name: 'Stonefast: Level 1',
+            active: false,
+            folder: null,
+            delete: jest.fn().mockImplementation(async function() {
+                const idx = mockScenes.indexOf(this);
+                if (idx !== -1) mockScenes.splice(idx, 1);
+            })
+        };
+        mockScenes.push(tempScene);
+
+        eval(macroScript);
+        await new Promise(r => setTimeout(r, 50));
+
+        const dlg = MockDialogV2.instances[0];
+        const cleanWorldBtn = dlg.element.querySelector('#btnCleanWorld');
+        expect(cleanWorldBtn).not.toBeNull();
+        expect(cleanWorldBtn.textContent).toContain("Sweep World (1)");
+
+        cleanWorldBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 100));
+
+        expect(tempScene.delete).toHaveBeenCalled();
+        expect(global.ui.notifications.info).toHaveBeenCalledWith(
+            expect.stringContaining("Swept world: successfully offloaded 1 scenes to compendium")
+        );
+    });
+
+    test("protects permanent campaign hubs from offloading", async () => {
+        eval(macroScript);
+        await new Promise(r => setTimeout(r, 50));
+
+        const dlg = MockDialogV2.instances[0];
+        // Ensure hub scenes don't have offload buttons
+        const hubOffloadBtn = dlg.element.querySelector('.btn-offload-scene[data-scene-id="hub1234567890123"]');
+        expect(hubOffloadBtn).toBeNull();
     });
 });
