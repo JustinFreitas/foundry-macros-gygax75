@@ -261,10 +261,24 @@ describe("Quick Scene Swapper Macro (Unified V2)", () => {
         expect(MockDialogV2.instances.length).toBe(1);
         const dlg = MockDialogV2.instances[0];
 
-        expect(dlg.config.classes).toEqual(["ose", "dialog"]);
+        expect(dlg.config.classes).toEqual(["ose", "dialog", "qss-dialog"]);
         expect(dlg.config.position).toEqual({ width: 680, height: 580 });
         expect(dlg.config.window.title).toBe("Quick Scene Swapper");
         expect(dlg.render).toHaveBeenCalledWith({ force: true });
+    });
+
+    test("establishes DialogV2 flex-chain styles and overflow-y auto for scrollable scenesContainer", async () => {
+        eval(macroScript);
+        await new Promise(r => setTimeout(r, 50));
+
+        const dlg = MockDialogV2.instances[0];
+        const content = dlg.config.content;
+
+        expect(content).toContain(".qss-dialog form.dialog-form");
+        expect(content).toContain(".qss-dialog .dialog-content");
+        expect(content).toContain("overflow-y: auto !important");
+        expect(content).toContain("flex: 1 1 0% !important");
+        expect(content).toContain("min-height: 0 !important");
     });
 
     test("groups scenes by module and displays active sidebar list in footer", async () => {

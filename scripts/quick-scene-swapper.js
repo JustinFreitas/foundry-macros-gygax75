@@ -339,12 +339,53 @@
 
   const dialogContent = `
     <style>
+      /* Establish continuous flex height chain in DialogV2 */
+      .qss-dialog,
+      .dialog:has(.qss-container) {
+        overflow: hidden !important;
+      }
+      .qss-dialog .window-content,
+      .dialog:has(.qss-container) .window-content {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+      .qss-dialog form.dialog-form,
+      .dialog:has(.qss-container) form.dialog-form {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .qss-dialog .dialog-content,
+      .dialog:has(.qss-container) .dialog-content {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .qss-dialog .form-footer,
+      .dialog:has(.qss-container) .form-footer {
+        flex-shrink: 0 !important;
+        margin-top: 6px !important;
+      }
       .qss-container {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        gap: 8px;
-        box-sizing: border-box;
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+        padding: 8px 10px 6px 10px !important;
       }
       .qss-toolbar {
         display: flex;
@@ -385,10 +426,28 @@
         border: 1px solid #962d22 !important;
       }
       #scenesContainer {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-        padding-right: 4px;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding-right: 6px !important;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.25) rgba(0, 0, 0, 0.25);
+      }
+      #scenesContainer::-webkit-scrollbar {
+        width: 8px;
+      }
+      #scenesContainer::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 4px;
+      }
+      #scenesContainer::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+      }
+      #scenesContainer::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
       }
       .module-group {
         margin-bottom: 6px;
@@ -583,7 +642,7 @@
 
   const dialog = new foundry.applications.api.DialogV2({
     window: { title: "Quick Scene Swapper", resizable: true },
-    classes: ["ose", "dialog"],
+    classes: ["ose", "dialog", "qss-dialog"],
     position: { width: 680, height: 580 },
     content: dialogContent,
     buttons: [{
