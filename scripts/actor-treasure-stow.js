@@ -176,42 +176,50 @@ function isLootableItem(item) {
 /**
  * Dual Version Shim: Works in V13 (Dialog) and V14 (DialogV2).
  */
-async function dialogWaitShim({ title, content, buttons, defaultButton, ...options } = {}) {
+async function dialogWaitShim({ title, content, buttons, defaultButton, rejectClose, classes, position, window: windowOptions, ...options } = {}) {
   const DialogV2 = foundry.applications?.api?.DialogV2;
 
   if (DialogV2) {
     return new Promise((resolve) => {
+      let settled = false;
+      const finish = (val) => {
+        if (!settled) {
+          settled = true;
+          resolve(val);
+        }
+      };
       const dialog = new DialogV2({
-        classes: ["ose", "dialog"],
-        position: { width: 400, height: "auto" },
-        window: { title, ...options.window },
+        ...options,
+        classes: Array.isArray(classes) ? classes : ["ose", "dialog"],
+        position: { width: 400, height: "auto", ...position },
+        window: { title, ...windowOptions },
         content: content,
         buttons: Object.entries(buttons).map(([id, btn]) => ({
           action: id,
           label: btn.label,
           icon: btn.icon,
           default: id === defaultButton,
-          callback: (event, button, dialog) => {
-            const result = btn.callback ? btn.callback(dialog.element) : id;
-            resolve(result);
+          callback: async (event, button, dialog) => {
+            const result = btn.callback ? await btn.callback(dialog.element) : id;
+            finish(result);
             return result;
           }
-        })),
-        rejectClose: false,
-        ...options
+        }))
       });
+      dialog.addEventListener?.("close", () => finish(null));
       dialog.render(true);
     });
   }
 
   return await Dialog.wait({
     title, content, buttons, default: defaultButton
-  }, options);
+  }, { rejectClose, classes, position, window: windowOptions, ...options });
 }
 
 if (typeof window !== 'undefined' && typeof Hooks !== 'undefined' && !window.stowTreasureHookRegistered) {
-    Hooks.on("renderChatMessage", (message, html, data) => {
-        const collapseButton = html[0].querySelector('button[data-action="collapse-details"]');
+    Hooks.on("renderChatMessageHTML", (message, html) => {
+        const root = html instanceof HTMLElement ? html : html?.[0];
+        const collapseButton = root?.querySelector?.('button[data-action="collapse-details"]');
         if (collapseButton) {
             collapseButton.addEventListener("click", (event) => {
                 const detailsId = event.currentTarget.dataset.detailsId;

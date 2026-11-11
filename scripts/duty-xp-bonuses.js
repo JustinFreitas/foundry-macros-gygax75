@@ -65,7 +65,7 @@ formHtml.push(`
                 action: "calculate",
                 label: "Apply Bonuses",
                 default: true,
-                callback: (event, button, dialog) => {
+                callback: async (event, button, dialog) => {
                     const html = $(dialog.element);
                     const requestUserSelectElement = html.find('#request-user-select')[0];
                     const callerUserSelectElement = html.find('#caller-user-select')[0];
@@ -79,6 +79,7 @@ formHtml.push(`
                     const selectedPlayers = [...selectedPlayersSet];
                     const partyActors = game.actors.filter(actor => actor.flags.ose?.party === true && !actor.system.retainer?.enabled && actor.system.details.class !== 'Mule');
                     const actorLogs = [];
+                    const updates = [];
                     actorLogs.push('<h2>Duty XP Report</h2>');
                     partyActors.forEach(actor => {
                         if (actor.ownership[requestUserSelectElement.value] === 3 || actor.ownership[callerUserSelectElement.value] === 3 || actor.ownership[mapperUserSelectElement.value] === 3) {
@@ -119,10 +120,12 @@ formHtml.push(`
                                 }
                             };
 
-                            actor.update({flags: flagsObj, system: systemObj});
+                            updates.push(actor.update({flags: flagsObj, system: systemObj}));
                             actorLogs.push(`<b>${actor.name}:</b> XP bonus updated from ${origXpBonus} to ${newXpBonus} for duty ${duties.join(", ")}.`);
                         }
                     });
+
+                    await Promise.all(updates);
 
                     if (partyActors.length === 0) {
                         actorLogs.push('No characters in party to update duty XP on.');
@@ -131,7 +134,7 @@ formHtml.push(`
                     }
 
                     const chatMessage = actorLogs.join('<br/>');
-                    ChatMessage.create({
+                    await ChatMessage.create({
                         content: chatMessage,
                     });
                 }

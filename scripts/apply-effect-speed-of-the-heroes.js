@@ -14,9 +14,10 @@
     const effectData = {
       name: "Speed of the Heroes",
       img: effectIcon,
-      icon: effectIcon,
+      showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
       duration: {
-        seconds: durationInSeconds
+        value: durationInSeconds,
+        units: "seconds"
       },
       flags: {
         ose: {
@@ -26,14 +27,16 @@
         }
       },
       description: `Movement rate multiplied by ${moveMultiplier}x (base & encounter). Double normal attacks per round (spells and magic devices not doubled).`,
-      changes: [
-        {
-          key: "system.movement.base",
-          mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
-          value: String(moveMultiplier),
-          priority: 20
-        }
-      ]
+      system: {
+        changes: [
+          {
+            key: "system.movement.base",
+            type: "multiply",
+            value: moveMultiplier,
+            priority: 20
+          }
+        ]
+      }
     };
 
     if (typeof macro !== "undefined" && macro?.uuid) {

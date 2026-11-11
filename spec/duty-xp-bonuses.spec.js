@@ -1,11 +1,26 @@
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: jest.fn() } } };
 const fs = require('fs');
 const path = require('path');
 
 const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/duty-xp-bonuses.js'), 'utf8');
 
+class MockDialogV2 {
+    static instances = [];
+    static onConstruct = null;
+
+    constructor(config) {
+        this.config = config;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+        if (MockDialogV2.onConstruct) MockDialogV2.onConstruct(this);
+    }
+}
+
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
+
 describe("Duty XP Bonuses Macro", () => {
+    let callbackPromise;
     beforeEach(() => {
         globalThis.game = {
             users: {
@@ -74,23 +89,23 @@ describe("Duty XP Bonuses Macro", () => {
             })
         };
 
-        global.Dialog = jest.fn().mockImplementation((dialogData) => {
-            const btn = dialogData.buttons.find(b => b.action === 'calculate');
+        callbackPromise = undefined;
+        MockDialogV2.instances = [];
+        MockDialogV2.onConstruct = (dlg) => {
+            const btn = dlg.config.buttons.find(b => b.action === 'calculate');
             if (btn && btn.callback) {
-                btn.callback(null, null, { element: mockHtml });
+                callbackPromise = btn.callback(null, null, { element: mockHtml });
             }
-            return {
-                render: jest.fn()
-            };
-        });
-        global.foundry.applications.api.DialogV2 = global.Dialog;
+        };
+        global.Dialog = MockDialogV2;
+        global.foundry.applications.api.DialogV2 = MockDialogV2;
 
         game.users.set([]);
         game.actors.set([]);
         ChatMessage.clear();
     });
 
-    test("should apply XP bonuses to selected users' actors", () => {
+    test("should apply XP bonuses to selected users' actors", async () => {
         const users = [
             { id: '1', name: 'Player1', hasPlayerOwner: true, active: true },
             { id: '2', name: 'Player2', hasPlayerOwner: true, active: true },
@@ -117,6 +132,7 @@ describe("Duty XP Bonuses Macro", () => {
 
 
         new Function(macroScript)();
+        await callbackPromise;
 
         expect(actors[0].update).toHaveBeenCalled();
         expect(actors[1].update).toHaveBeenCalled();

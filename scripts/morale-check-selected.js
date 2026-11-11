@@ -28,14 +28,14 @@ const applyFleeing = async (actor) => {
     const penalty = actor.type === 'monster' ? MONSTER_SHIELD_VALUE : (Number(actor.system?.aac?.shield) || 0);
     const acDelta = -penalty || 0; // collapse -0
     const changes = penalty > 0
-        ? [{ key: 'system.aac.mod', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: acDelta }]
+        ? [{ key: 'system.aac.mod', type: 'add', value: acDelta }]
         : [];
     await actor.createEmbeddedDocuments('ActiveEffect', [{
         name: 'Fleeing',
         img: FLEEING_IMG,
         statuses: [STATUS_ID],
-        showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
-        changes,
+        showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
+        system: { changes },
         flags: { ose: { fleeingAc: acDelta } },
     }]);
 };

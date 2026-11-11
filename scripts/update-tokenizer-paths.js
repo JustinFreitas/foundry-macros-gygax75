@@ -17,7 +17,7 @@ const DRY_RUN = true; // Set to false to actually apply updates
 const FORGE_URL_PREFIX = 'https://assets.forge-vtt.com';
 const TOKENIZER_FILTER = '/tokenizer/';
 
-function expandObject(obj) {
+const expandUpdates = globalThis.foundry?.utils?.expandObject ?? function expandUpdatesFallback(obj) {
     const expanded = {};
     for (const [key, value] of Object.entries(obj)) {
         let current = expanded;
@@ -33,7 +33,7 @@ function expandObject(obj) {
         }
     }
     return expanded;
-}
+};
 
 function checkObject(obj, path, docName, updates) {
     if (!obj || typeof obj !== 'object') return;
@@ -86,7 +86,7 @@ function processCollection(collection, typeLabel) {
                 // Let's rely on Foundry's flat key support for updates which is standard
                 // But wait, previous scripts used expandObject. 
                 // Let's use expandObject to be consistent with the user's prior "check" script patterns
-                const expandedUpdates = expandObject(updates);
+                const expandedUpdates = expandUpdates(updates);
 
                 console.log(`Updating ${document.name}...`);
                 document.update(expandedUpdates);

@@ -86,7 +86,7 @@ for (const token of controlled) {
         // `|| 0` collapses -0 (from negating 0) to a clean 0.
         const acDelta = -penalty || 0;
         const changes = penalty > 0
-            ? [{ key: 'system.aac.mod', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: acDelta }]
+            ? [{ key: 'system.aac.mod', type: 'add', value: acDelta }]
             : [];
         await actor.createEmbeddedDocuments('ActiveEffect', [{
             name: 'Fleeing',
@@ -94,8 +94,8 @@ for (const token of controlled) {
             statuses: [STATUS_ID],
             // v14 only paints a token icon for showIcon ALWAYS, or CONDITIONAL
             // with a duration. This effect has no duration, so force ALWAYS.
-            showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
-            changes,
+            showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
+            system: { changes },
             flags: { ose: { fleeingAc: acDelta } },
         }]);
         reportByActorName.set(actor.name, { adding: true, ac: acDelta });

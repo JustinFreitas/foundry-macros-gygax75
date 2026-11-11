@@ -11,57 +11,78 @@
   const applyBlessedEffect = async (attackBonus, damageBonus, moraleBonus, hours) => {
     const durationInSeconds = hours * 3600;
 
-    const changes = [
+    const baseChanges = [
       {
         key: "system.thac0.mod.melee",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: String(attackBonus),
+        type: "add",
+        value: attackBonus,
         priority: 20
       },
       {
         key: "system.thac0.mod.missile",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: String(attackBonus),
+        type: "add",
+        value: attackBonus,
         priority: 20
       },
       {
         key: "system.damage.mod.melee",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: String(damageBonus),
+        type: "add",
+        value: damageBonus,
         priority: 20
       },
       {
         key: "system.damage.mod.missile",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: String(damageBonus),
-        priority: 20
-      },
-      {
-        key: "system.details.morale",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: String(moraleBonus),
+        type: "add",
+        value: damageBonus,
         priority: 20
       }
     ];
 
-    const effectData = {
-      name: "Blessed",
-      img: effectIcon,
-      icon: effectIcon,
-      duration: {
-        seconds: durationInSeconds
-      },
-      description: `Grants +${attackBonus} Attack, +${damageBonus} Damage, and +${moraleBonus} Morale.`,
-      changes: changes
-    };
-
-    if (typeof macro !== "undefined" && macro?.uuid) {
-      effectData.origin = macro.uuid;
-    }
-
     for (const token of tokens) {
-      if (token.actor) {
-        await token.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+      const actor = token.actor;
+      if (actor) {
+        const actorChanges = [...baseChanges];
+        if (moraleBonus !== 0) {
+          if (actor.type === "monster") {
+            const raw = actor._source?.system?.details?.morale ?? actor.system?.details?.morale;
+            const n = Number.parseInt(raw, 10);
+            if (Number.isInteger(n) && String(n) === String(raw ?? "").trim()) {
+              actorChanges.push({
+                key: "system.details.morale",
+                type: "override",
+                value: String(n + moraleBonus),
+                priority: 20
+              });
+            }
+          } else if (actor.system?.retainer?.enabled === true) {
+            actorChanges.push({
+              key: "system.retainer.loyalty",
+              type: "add",
+              value: moraleBonus,
+              priority: 20
+            });
+          }
+        }
+
+        const effectData = {
+          name: "Blessed",
+          img: effectIcon,
+          showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
+          duration: {
+            value: durationInSeconds,
+            units: "seconds"
+          },
+          description: `Grants +${attackBonus} Attack, +${damageBonus} Damage, and +${moraleBonus} Morale.`,
+          system: {
+            changes: actorChanges
+          }
+        };
+
+        if (typeof macro !== "undefined" && macro?.uuid) {
+          effectData.origin = macro.uuid;
+        }
+
+        await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
         ui.notifications.info(`Applied 'Blessed' (+${attackBonus} Atk, +${damageBonus} Dmg, +${moraleBonus} Morale) to ${token.name} for ${hours} hr(s).`);
       }
     }

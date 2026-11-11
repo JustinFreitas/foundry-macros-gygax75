@@ -19,20 +19,24 @@ describe("stat-block-parser", () => {
 
         mockDialog = { config: {} };
 
-        const DialogMock = jest.fn().mockImplementation((config) => {
-            mockDialog.config = config;
-            return {
-                render: jest.fn()
-            };
-        });
+        class MockDialogV2 {
+            static instances = [];
+            constructor(config) {
+                mockDialog.config = config;
+                this.config = config;
+                this.render = jest.fn();
+                this.addEventListener = jest.fn();
+                MockDialogV2.instances.push(this);
+            }
+        }
         global.foundry = {
             applications: {
                 api: {
-                    DialogV2: DialogMock
+                    DialogV2: MockDialogV2
                 }
             }
         };
-        global.Dialog = DialogMock;
+        global.Dialog = MockDialogV2;
 
         global.game = {
             actors: {
@@ -138,8 +142,8 @@ describe("stat-block-parser", () => {
             require("../scripts/stat-block-parser");
 
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            expect(DialogV2Mock).toHaveBeenCalled();
-            const dialogConfig = DialogV2Mock.mock.calls[0][0];
+            expect(DialogV2Mock.instances.length).toBe(1);
+            const dialogConfig = DialogV2Mock.instances[0].config;
 
             expect(dialogConfig.window.title).toBe("Create Monster from Stat Block");
             expect(dialogConfig.content).toContain("monster-name");
@@ -157,7 +161,7 @@ describe("stat-block-parser", () => {
             require("../scripts/stat-block-parser");
 
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const mockHtml = {
@@ -184,7 +188,7 @@ describe("stat-block-parser", () => {
         it("should parse Treasure Type from AD&D stat block", async () => {
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const addStatBlock = `TREASURE TYPE: E`;
@@ -205,7 +209,7 @@ describe("stat-block-parser", () => {
         it("should parse various Treasure Type formats", async () => {
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const testCases = [
@@ -229,7 +233,7 @@ describe("stat-block-parser", () => {
         it("should prioritize explicit HP over calculated HP", async () => {
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const statBlock = `AC: 8; MV: 1”; HD: 3+3; HP: 50; #AT: 1; D: 2-16;`;
@@ -249,7 +253,7 @@ describe("stat-block-parser", () => {
         it("should handle undead morale logic (Wight)", async () => {
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const addStatBlock = `HIT DICE: 5 + 3`;
@@ -271,7 +275,7 @@ describe("stat-block-parser", () => {
             mockActor.create.mockRejectedValue(new Error("Database error"));
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const mockHtml = {
@@ -290,7 +294,7 @@ describe("stat-block-parser", () => {
         it("should handle multi-line stat blocks", async () => {
             require("../scripts/stat-block-parser");
             const DialogV2Mock = foundry.applications.api.DialogV2;
-            const dialogConfig = DialogV2Mock.mock.calls[DialogV2Mock.mock.calls.length - 1][0];
+            const dialogConfig = DialogV2Mock.instances[DialogV2Mock.instances.length - 1].config;
             const callback = dialogConfig.buttons.find(b => b.action === 'create').callback;
 
             const mockHtml = {

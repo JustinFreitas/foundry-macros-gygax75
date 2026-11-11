@@ -6,7 +6,8 @@ const {
     countActionable,
     escapeHtml,
     renderProcedureHtml,
-    bindProcedureHandlers
+    bindProcedureHandlers,
+    runProcedure
 } = require("../scripts/lib/procedure-runner.js");
 
 describe("procedure-runner: buildProcedureModel", () => {
@@ -73,9 +74,9 @@ describe("procedure-runner: renderProcedureHtml", () => {
         expect(html).toContain("0 / 2 done");
     });
 
-    test("the form is given a min-width and full width so rows fill the dialog", () => {
+    test("the form uses full width without hardcoded min-width so DialogV2 position controls sizing", () => {
         const html = renderProcedureHtml(buildProcedureModel("T", [{ manual: "x" }]));
-        expect(html).toMatch(/class="procedure-runner"[^>]*min-width/);
+        expect(html).not.toMatch(/min-width/);
         expect(html).toContain("width:100%");
     });
 
@@ -143,5 +144,47 @@ describe("procedure-runner: bindProcedureHandlers", () => {
         box.dispatchEvent(new Event("change"));
         expect(root.querySelector(".procedure-progress").textContent).toBe("0 / 1 done");
         expect(root.querySelector('.procedure-check[data-index="0"]').textContent).toBe("");
+    });
+});
+
+describe("procedure-runner: runProcedure", () => {
+    class MockDialogV2 {
+        static instances = [];
+        constructor(config) {
+            this.config = config;
+            this.element = document.createElement("div");
+            this.element.innerHTML = config.content;
+            this.listeners = {};
+            this.addEventListener = jest.fn((event, handler) => {
+                this.listeners[event] = handler;
+            });
+            this.render = jest.fn(() => {
+                if (this.listeners.render) this.listeners.render({ target: this });
+                return this;
+            });
+            MockDialogV2.instances.push(this);
+        }
+    }
+
+    beforeEach(() => {
+        MockDialogV2.instances = [];
+        global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
+    });
+
+    afterEach(() => {
+        delete global.foundry;
+    });
+
+    test("renders DialogV2 with OSE classes, explicit position, and resolves on close", async () => {
+        const promise = runProcedure("Dungeon Turn", [{ manual: "Check torches" }]);
+        expect(MockDialogV2.instances.length).toBe(1);
+        const dlg = MockDialogV2.instances[0];
+        expect(dlg.config.classes).toEqual(["ose", "dialog"]);
+        expect(dlg.config.position).toEqual({ width: 560, height: "auto" });
+        expect(dlg.config.window.title).toBe("Dungeon Turn");
+        expect(dlg.render).toHaveBeenCalledWith({ force: true });
+
+        dlg.listeners.close();
+        await expect(promise).resolves.toBeNull();
     });
 });

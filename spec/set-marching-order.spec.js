@@ -20,16 +20,22 @@ global.ui = {
 
 
 let capturedRender;
-global.foundry = { applications: { api: { DialogV2: jest.fn(function(dialogData) {
-    this.data = dialogData;
-    this.render = jest.fn();
-    this.addEventListener = jest.fn((event, cb) => {
-        if (event === 'render') {
-            capturedRender = cb;
-        }
-    });
-}) } } };
-global.Dialog = global.foundry.applications.api.DialogV2;
+class MockDialogV2 {
+    static instances = [];
+    constructor(dialogData) {
+        this.data = dialogData;
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn((event, cb) => {
+            if (event === 'render') {
+                capturedRender = cb;
+            }
+        });
+        MockDialogV2.instances.push(this);
+    }
+}
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
+global.Dialog = MockDialogV2;
 
 
 // Render the dialog's HTML string into a real (jsdom) container and return a
@@ -45,6 +51,7 @@ function mountDialogContent(content) {
 describe("Set Marching Order Macro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        MockDialogV2.instances = [];
         document.body.innerHTML = "";
     });
 
@@ -52,7 +59,7 @@ describe("Set Marching Order Macro", () => {
         game.actors.filter.mockReturnValue([]);
         eval(macroScript);
         expect(ui.notifications.warn).toHaveBeenCalledWith("There are no characters currently in your OSE Party Sheet!");
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
     });
 
     test("should render rows pre-sorted by current marching order, unset last", () => {
@@ -65,7 +72,7 @@ describe("Set Marching Order Macro", () => {
 
         eval(macroScript);
 
-        const content = Dialog.mock.calls[0][0].content;
+        const content = MockDialogV2.instances[0].config.content;
         const html = mountDialogContent(content);
         const ids = [...html[0].querySelectorAll(".mo-row")].map(r => r.dataset.actorId);
         expect(ids).toEqual(['a1', 'a2', 'a3']);
@@ -79,7 +86,7 @@ describe("Set Marching Order Macro", () => {
         game.actors.filter.mockReturnValue(actors);
         eval(macroScript);
 
-        const dialog = Dialog.mock.calls[0][0];
+        const dialog = MockDialogV2.instances[0].config;
         const html = mountDialogContent(dialog.content);
         if(html[0] && !html[0].querySelector) html[0].querySelector = sel => { const el = html.find(sel); return el && el.length ? el[0] : null; };
 capturedRender({ target: { element: html[0] } });
@@ -96,7 +103,7 @@ capturedRender({ target: { element: html[0] } });
         game.actors.get.mockImplementation(id => ({ a1, a2, a3 }[id]));
 
         eval(macroScript);
-        const dialog = Dialog.mock.calls[0][0];
+        const dialog = MockDialogV2.instances[0].config;
         const html = mountDialogContent(dialog.content);
 
         // Simulate a drag that moves Hero 3 to the top: a3, a1, a2.
@@ -120,7 +127,7 @@ capturedRender({ target: { element: html[0] } });
         game.actors.get.mockImplementation(id => made.find(a => a.id === id));
 
         eval(macroScript);
-        const dialog = Dialog.mock.calls[0][0];
+        const dialog = MockDialogV2.instances[0].config;
         const html = mountDialogContent(dialog.content);
         await dialog.buttons.find(b => b.action === 'save').callback(null, null, { element: html[0] });
 

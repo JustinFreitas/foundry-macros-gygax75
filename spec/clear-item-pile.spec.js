@@ -17,18 +17,31 @@ global.ui = {
 };
 
 global.$ = (x) => x;
-global.Dialog = jest.fn().mockImplementation(function(dialogData) {
-    this.render = jest.fn();
-    this.data = dialogData; 
-});
-global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
+
+class MockDialogV2 {
+    static instances = [];
+    static onConstruct = null;
+
+    constructor(dialogData) {
+        this.data = dialogData;
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+        if (MockDialogV2.onConstruct) MockDialogV2.onConstruct(this);
+    }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 describe("Clear Item Pile Macro", () => {
     beforeEach(() => {
         canvas.tokens.controlled = [];
         ui.notifications.warn.mockClear();
         ui.notifications.info.mockClear();
-        Dialog.mockClear();
+        MockDialogV2.instances = [];
+        MockDialogV2.onConstruct = null;
     });
 
     test("should warn if no tokens are selected", async () => {
@@ -39,7 +52,7 @@ describe("Clear Item Pile Macro", () => {
         await scriptFunction();
 
         expect(ui.notifications.warn).toHaveBeenCalledWith("No tokens selected. Please select at least one Item Pile token.");
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
     });
 
     test("should warn if selected tokens are not Item Piles", async () => {
@@ -57,7 +70,7 @@ describe("Clear Item Pile Macro", () => {
         await scriptFunction();
 
         expect(ui.notifications.warn).toHaveBeenCalledWith("No Item Pile actors selected.");
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
     });
 
     test("should prompt and clear items from Item Pile actors", async () => {
@@ -80,18 +93,17 @@ describe("Clear Item Pile Macro", () => {
         ];
         canvas.tokens.controlled = actors.map(a => ({ actor: a }));
 
-        // Hook into the Dialog constructor to auto-confirm
-        Dialog.mockImplementationOnce(function(dialogData) {
-            this.render = jest.fn();
-            // Simulate clicking 'yes'
-            dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
-        });
+        let callbackPromise;
+        MockDialogV2.onConstruct = (dlg) => {
+            callbackPromise = dlg.config.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
+        };
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const scriptFunction = new AsyncFunction(macroScript);
         await scriptFunction();
+        await callbackPromise;
 
-        expect(Dialog).toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(1);
         
         // First actor has items, should call delete
         expect(actors[0].deleteEmbeddedDocuments).toHaveBeenCalledWith("Item", ['item1', 'item2']);

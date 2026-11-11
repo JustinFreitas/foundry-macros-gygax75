@@ -29,11 +29,24 @@ global.ChatMessage = {
 };
 
 global.$ = (x) => x;
-global.Dialog = jest.fn().mockImplementation(function(dialogData) {
-    this.render = jest.fn();
-    dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
-});
-global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
+
+class MockDialogV2 {
+    static instances = [];
+
+    constructor(dialogData) {
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+        const yesBtn = dialogData.buttons.find(b => b.action === "yes");
+        if (yesBtn?.callback) {
+            this.callbackPromise = yesBtn.callback(null, null, { element: document.createElement("div") });
+        }
+    }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 describe("Delete Found Items Macro", () => {
 
@@ -41,6 +54,7 @@ describe("Delete Found Items Macro", () => {
         canvas.tokens.controlled = [];
         ChatMessage.clear();
         ui.notifications.info.mockClear();
+        MockDialogV2.instances = [];
     });
 
     test("should delete found items from selected actors", async () => {

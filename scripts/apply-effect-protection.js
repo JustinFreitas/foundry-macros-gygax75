@@ -14,24 +14,27 @@
     const effectData = {
       name: "Protection of the Heroes",
       img: effectIcon,
-      icon: effectIcon,
+      showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
       duration: {
-        seconds: durationInSeconds
+        value: durationInSeconds,
+        units: "seconds"
       },
-      changes: [
-        {
-          key: "system.aac.mod",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: String(acBonus),
-          priority: 20
-        },
-        {
-          key: "system.ac.mod",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: String(-acBonus),
-          priority: 20
-        }
-      ]
+      system: {
+        changes: [
+          {
+            key: "system.aac.mod",
+            type: "add",
+            value: acBonus,
+            priority: 20
+          },
+          {
+            key: "system.ac.mod",
+            type: "add",
+            value: -acBonus,
+            priority: 20
+          }
+        ]
+      }
     };
 
     if (typeof macro !== "undefined" && macro?.uuid) {

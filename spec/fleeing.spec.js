@@ -22,7 +22,7 @@ describe('Fleeing', () => {
                     id: `effect-${eff.length}`,
                     name: doc.name,
                     statuses: new Set(doc.statuses ?? []),
-                    changes: doc.changes ?? [],
+                    system: { changes: doc.system?.changes ?? [] },
                     flags: doc.flags ?? {},
                 }));
             }),
@@ -41,7 +41,7 @@ describe('Fleeing', () => {
         id: 'existing-fleeing',
         name: 'Fleeing',
         statuses: new Set(['fleeing']),
-        changes: fleeingAc ? [{ key: 'system.aac.mod', mode: 2, value: fleeingAc }] : [],
+        system: { changes: fleeingAc ? [{ key: 'system.aac.mod', type: 'add', value: fleeingAc }] : [] },
         flags: { ose: { fleeingAc } },
     });
 
@@ -71,7 +71,7 @@ describe('Fleeing', () => {
             expect(docs[0].statuses).toEqual(['fleeing']);
             expect(docs[0].showIcon).toBe(2);
             // Shield bonus 2 -> AC worsens by 2 (negative on ascending aac.mod).
-            expect(docs[0].changes).toEqual([{ key: 'system.aac.mod', mode: 2, value: -2 }]);
+            expect(docs[0].system.changes).toEqual([{ key: 'system.aac.mod', type: 'add', value: -2 }]);
             expect(docs[0].flags).toEqual({ ose: { fleeingAc: -2 } });
 
             const content = lastContent();
@@ -87,7 +87,7 @@ describe('Fleeing', () => {
             await run(canvas);
 
             const [, docs] = a.createEmbeddedDocuments.mock.calls[0];
-            expect(docs[0].changes).toEqual([]);
+            expect(docs[0].system.changes).toEqual([]);
             expect(docs[0].flags).toEqual({ ose: { fleeingAc: 0 } });
             expect(lastContent()).toContain('no shield to forfeit');
         });
@@ -99,7 +99,7 @@ describe('Fleeing', () => {
             await run(canvas);
 
             const [, docs] = m.createEmbeddedDocuments.mock.calls[0];
-            expect(docs[0].changes).toEqual([{ key: 'system.aac.mod', mode: 2, value: -1 }]);
+            expect(docs[0].system.changes).toEqual([{ key: 'system.aac.mod', type: 'add', value: -1 }]);
             expect(docs[0].flags).toEqual({ ose: { fleeingAc: -1 } });
         });
     });

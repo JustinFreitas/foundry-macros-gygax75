@@ -42,7 +42,7 @@ describe("Duty XP Reset Macro", () => {
         ChatMessage.clear();
     });
 
-    test("should reset XP bonus for actors with dutyXP flag", () => {
+    test("should reset XP bonus for actors with dutyXP flag", async () => {
         const actorsData = [
             {
                 name: 'Alice',
@@ -75,7 +75,7 @@ describe("Duty XP Reset Macro", () => {
         game.actors.set(actorsData);
         const actors = game.actors._data;
 
-        eval(macroScript);
+        await eval(macroScript);
 
         expect(actors[0].update).toHaveBeenCalledWith({
             'flags.-=dutyXP': null,

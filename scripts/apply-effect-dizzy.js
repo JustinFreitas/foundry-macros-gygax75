@@ -15,24 +15,27 @@
     const effectData = {
       name: "Dizzy",
       img: effectIcon,
-      icon: effectIcon,
+      showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
       duration: {
-        seconds: durationInSeconds
+        value: durationInSeconds,
+        units: "seconds"
       },
-      changes: [
-        {
-          key: "system.thac0.mod.melee",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: String(penaltyVal),
-          priority: 20
-        },
-        {
-          key: "system.thac0.mod.missile",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: String(penaltyVal),
-          priority: 20
-        }
-      ]
+      system: {
+        changes: [
+          {
+            key: "system.thac0.mod.melee",
+            type: "add",
+            value: penaltyVal,
+            priority: 20
+          },
+          {
+            key: "system.thac0.mod.missile",
+            type: "add",
+            value: penaltyVal,
+            priority: 20
+          }
+        ]
+      }
     };
 
     if (typeof macro !== "undefined" && macro?.uuid) {

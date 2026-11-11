@@ -37,7 +37,7 @@ if (partyActors.length === 0) {
         buttons: [
             {
                 action: "save",
-                icon: '<i class="fas fa-save"></i>',
+                icon: "fas fa-save",
                 label: "Save Order",
                 default: true,
                 callback: async (event, button, dialog) => {
@@ -54,7 +54,7 @@ if (partyActors.length === 0) {
             },
             {
                 action: "cancel",
-                icon: '<i class="fas fa-times"></i>',
+                icon: "fas fa-times",
                 label: "Cancel"
             }
         ]

@@ -14,18 +14,21 @@
     const effectData = {
       name: "Might of the Heroes",
       img: effectIcon,
-      icon: effectIcon,
+      showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
       duration: {
-        seconds: durationInSeconds
+        value: durationInSeconds,
+        units: "seconds"
       },
-      changes: [
-        {
-          key: "system.damage.mod.melee",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: String(bonus),
-          priority: 20
-        }
-      ]
+      system: {
+        changes: [
+          {
+            key: "system.damage.mod.melee",
+            type: "add",
+            value: bonus,
+            priority: 20
+          }
+        ]
+      }
     };
 
     if (typeof macro !== "undefined" && macro?.uuid) {

@@ -14,7 +14,7 @@
     const effectData = {
       name: "Poisoned / Diseased",
       img: effectIcon,
-      icon: effectIcon,
+      showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
       flags: {
         ose: {
           preventsHealing: true

@@ -60,44 +60,45 @@ global.ChatMessage = {
 // Stands in for DialogV2. The real class injects options.content into the DOM and emits a
 // "render" event once it exists; reproduce both so the macro's listener wiring is exercised.
 function installDialogMock() {
-    const DialogV2 = jest.fn().mockImplementation(function(config) {
-        const listeners = {};
-        const element = document.createElement('div');
-        element.innerHTML = config.content.innerHTML;
+    class MockDialogV2 {
+        static instances = [];
+        constructor(config) {
+            const listeners = {};
+            const element = document.createElement('div');
+            element.innerHTML = config.content.innerHTML;
 
-        const instance = {
-            config,
-            element,
-            render: jest.fn(),
-            addEventListener: jest.fn(function(eventName, handler) {
+            this.config = config;
+            this.element = element;
+            this.render = jest.fn();
+            this.addEventListener = jest.fn(function(eventName, handler) {
                 listeners[eventName] = handler;
-            }),
-            fireRender() {
-                listeners.render({ target: instance });
-            },
-            pasteSheetData(text) {
+            });
+            this.fireRender = () => {
+                listeners.render({ target: this });
+            };
+            this.pasteSheetData = (text) => {
                 const textarea = element.querySelector('#sheet-data');
                 const event = new Event('paste', { bubbles: true, cancelable: true });
                 event.clipboardData = { getData: () => text };
                 textarea.dispatchEvent(event);
-            },
-            row(actorName) {
+            };
+            this.row = (actorName) => {
                 return Array.from(element.querySelectorAll('.upkeep-row'))
                     .find(r => r.querySelector('.actor-name').textContent.includes(actorName));
-            },
-            setInputs(actorName, upkeep, heal) {
-                const row = instance.row(actorName);
+            };
+            this.setInputs = (actorName, upkeep, heal) => {
+                const row = this.row(actorName);
                 row.querySelector('input.character').value = String(upkeep);
                 row.querySelector('input.heal').value = String(heal);
-            },
-            processUpkeep() {
-                return config.buttons.find(b => b.action === 'calculate').callback(null, null, instance);
-            }
-        };
-        global.lastDialog = instance;
-        return instance;
-    });
-    global.foundry = { applications: { api: { DialogV2 } } };
+            };
+            this.processUpkeep = () => {
+                return config.buttons.find(b => b.action === 'calculate').callback(null, null, this);
+            };
+            MockDialogV2.instances.push(this);
+            global.lastDialog = this;
+        }
+    }
+    global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 }
 
 const bankLedger = (value) => ({

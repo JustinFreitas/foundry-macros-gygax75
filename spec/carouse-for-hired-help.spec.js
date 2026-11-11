@@ -106,14 +106,21 @@ describe('CarouseForHiredHelp', () => {
             })
         };
 
-        Dialog = jest.fn().mockImplementation((dialogData) => {
-            dialogData = dialogData || {};
-            capturedRender = dialogData.render;
-            return {
-                render: jest.fn(),
-                addEventListener: jest.fn((event, cb) => { if (event === 'render') { capturedRender = cb; } })
-            };
-        });
+        class MockDialogV2 {
+            static instances = [];
+            constructor(dialogData = {}) {
+                this.config = dialogData;
+                capturedRender = dialogData.render;
+                this.render = jest.fn();
+                this.addEventListener = jest.fn((event, cb) => {
+                    if (event === 'render') {
+                        capturedRender = cb;
+                    }
+                });
+                MockDialogV2.instances.push(this);
+            }
+        }
+        Dialog = MockDialogV2;
 
         // Set globals
         global.game = game;
@@ -121,8 +128,8 @@ describe('CarouseForHiredHelp', () => {
         global.ui = ui;
         global.SimpleCalendar = SimpleCalendar;
         global.Actor = Actor;
-        global.foundry = { applications: { api: { DialogV2: Dialog } } };
-        global.Dialog = Dialog;
+        global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
+        global.Dialog = MockDialogV2;
 
         // Mock jQuery element with jQuery methods directly on it
         const elementMock = (selector) => {
@@ -190,7 +197,7 @@ describe('CarouseForHiredHelp', () => {
     test('should load Dialog and display selected PC stats correctly', async () => {
         eval(macroScript);
 
-        expect(global.foundry.applications.api.DialogV2).toHaveBeenCalled();
+        expect(global.foundry.applications.api.DialogV2.instances.length).toBe(1);
         await capturedRender({ target: { element: mockHtml } });
 
         // Verify HTML element search was performed for pc-stats-display

@@ -16,7 +16,7 @@ const TARGET_STRINGS = [
     'modules/justins-gygax-75-module'
 ];
 
-function expandObject(obj) {
+const expandUpdates = globalThis.foundry?.utils?.expandObject ?? function expandUpdatesFallback(obj) {
     const expanded = {};
     for (const [key, value] of Object.entries(obj)) {
         let current = expanded;
@@ -32,7 +32,7 @@ function expandObject(obj) {
         }
     }
     return expanded;
-}
+};
 
 function checkObject(obj, path, docName, updates) {
     if (!obj || typeof obj !== 'object') return;
@@ -97,7 +97,7 @@ function processCollection(collection, typeLabel) {
             updateCount++;
             if (!DRY_RUN && typeof document.update === 'function') {
                 // Expand the flat keys back to a nested object for update()
-                const expandedUpdates = expandObject(updates);
+                const expandedUpdates = expandUpdates(updates);
 
                 console.log(`Updating ${document.name}...`);
                 document.update(expandedUpdates);

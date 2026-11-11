@@ -1,9 +1,24 @@
 global.$ = (x) => x;
-global.foundry = { applications: { api: { DialogV2: jest.fn() } } };
 const fs = require('fs');
 const path = require('path');
 
 const macroScript = fs.readFileSync(path.resolve(__dirname, '../scripts/pay-party-retainers-from-date.js'), 'utf8');
+
+let capturedCallback;
+class MockDialogV2 {
+  static instances = [];
+  constructor(dialogData) {
+    this.config = dialogData;
+    this.render = jest.fn();
+    this.addEventListener = jest.fn();
+    const calcBtn = dialogData.buttons?.find(b => b.action === 'calculate');
+    if (calcBtn) capturedCallback = calcBtn.callback;
+    MockDialogV2.instances.push(this);
+  }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 describe('PayPartyRetainersFromDate', () => {
   beforeEach(() => {
@@ -73,15 +88,7 @@ describe('PayPartyRetainersFromDate', () => {
       find: jest.fn(() => [{ value: '1/1/2025' }]),
     };
 
-    let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-        capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
-        return {
-            render: jest.fn()
-        };
-    });
-    global.foundry.applications.api.DialogV2 = global.Dialog;
-
+    MockDialogV2.instances = [];
     eval(macroScript);
 
     await capturedCallback(null, null, { element: html });
@@ -102,13 +109,7 @@ describe('PayPartyRetainersFromDate', () => {
       find: jest.fn(() => [{ value: '1/1/2025' }]),
     };
 
-    let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-      capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
-      return { render: jest.fn() };
-    });
-    global.foundry.applications.api.DialogV2 = global.Dialog;
-
+    MockDialogV2.instances = [];
     eval(macroScript);
 
     await capturedCallback(null, null, { element: html });
@@ -125,13 +126,7 @@ describe('PayPartyRetainersFromDate', () => {
       find: jest.fn(() => [{ value: 'not a date' }]),
     };
 
-    let capturedCallback;
-    global.Dialog = jest.fn().mockImplementation((dialogData) => {
-      capturedCallback = dialogData.buttons.find(b => b.action === 'calculate').callback;
-      return { render: jest.fn() };
-    });
-    global.foundry.applications.api.DialogV2 = global.Dialog;
-
+    MockDialogV2.instances = [];
     eval(macroScript);
 
     await capturedCallback(null, null, { element: html });

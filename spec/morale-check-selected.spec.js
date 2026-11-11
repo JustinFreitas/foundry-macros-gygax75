@@ -60,7 +60,7 @@ describe('MoraleCheckSelected', () => {
         const [type, docs] = m.createEmbeddedDocuments.mock.calls[0];
         expect(type).toBe('ActiveEffect');
         expect(docs[0].name).toBe('Fleeing');
-        expect(docs[0].changes).toEqual([{ key: 'system.aac.mod', mode: 2, value: -1 }]);
+        expect(docs[0].system.changes).toEqual([{ key: 'system.aac.mod', type: 'add', value: -1 }]);
         const content = lastContent();
         expect(content).toContain('Morale FAILED');
         expect(content).toContain('rolled 10 vs 7');

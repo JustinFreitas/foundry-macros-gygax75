@@ -6,7 +6,10 @@ const {
     rollBudget,
     pickGem,
     splitCoins,
-    composeHaul
+    composeHaul,
+    buildItemPayloads,
+    haulToHtml,
+    promptLevel
 } = require("../scripts/encounter-treasure.js");
 
 // A small seedable PRNG (mulberry32) so "random" runs are reproducible.
@@ -177,6 +180,79 @@ describe("encounter-treasure pure logic", () => {
                 expect(avg).toBeGreaterThan(target * 0.9);
                 expect(avg).toBeLessThan(target * 1.1);
             }
+        });
+    });
+
+    describe("buildItemPayloads / haulToHtml / promptLevel", () => {
+        class MockDialogV2 {
+            static instances = [];
+            constructor(config) {
+                this.config = config;
+                this.element = document.createElement("div");
+                this.element.innerHTML = config.content;
+                this.listeners = {};
+                this.addEventListener = jest.fn((event, handler) => {
+                    this.listeners[event] = handler;
+                });
+                this.render = jest.fn();
+                MockDialogV2.instances.push(this);
+            }
+        }
+
+        beforeEach(() => {
+            MockDialogV2.instances = [];
+            global.foundry = {
+                applications: { api: { DialogV2: MockDialogV2 } },
+                utils: {
+                    mergeObject: (target, overrides) => {
+                        for (const [k, v] of Object.entries(overrides)) {
+                            if (k === "system.cost") {
+                                target.system = target.system || {};
+                                target.system.cost = v;
+                            } else {
+                                target[k] = v;
+                            }
+                        }
+                        return target;
+                    }
+                }
+            };
+        });
+
+        test("preserves (Found) suffix on cloned jewelry items and chat HTML", () => {
+            global.game = {
+                items: {
+                    get: jest.fn((id) => ({
+                        toObject: () => ({ _id: id, name: "Source Item (Found)", system: { cost: 1 } })
+                    }))
+                }
+            };
+            const haul = {
+                level: 2,
+                spreadRoll: 7,
+                budget: 200,
+                totalGp: 200,
+                coins: [{ kind: "GP", quantity: 100, value: 1 }],
+                gem: null,
+                jewelry: { value: 100 }
+            };
+            const payloads = buildItemPayloads(haul, CONFIG);
+            const jewelryPayload = payloads.find((p) => p.item.name.startsWith("Jewelry"));
+            expect(jewelryPayload.item.name).toBe("Jewelry (100 gp) (Found)");
+            expect(jewelryPayload.item.system.cost).toBe(100);
+            expect(haulToHtml(haul)).toContain("Jewelry (100 gp) (Found)");
+        });
+
+        test("promptLevel uses OSE DialogV2 classes/position and resolves null on window close", async () => {
+            const promise = promptLevel();
+            expect(MockDialogV2.instances.length).toBe(1);
+            const dlg = MockDialogV2.instances[0];
+            expect(dlg.config.classes).toEqual(["ose", "dialog"]);
+            expect(dlg.config.position).toEqual({ width: 400, height: "auto" });
+            expect(dlg.render).toHaveBeenCalledWith(true);
+
+            dlg.listeners.close();
+            await expect(promise).resolves.toBeNull();
         });
     });
 });

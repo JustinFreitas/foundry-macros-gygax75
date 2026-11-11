@@ -135,7 +135,7 @@ function renderProcedureHtml(model) {
     });
     const total = countActionable(model);
     return `
-        <form class="procedure-runner" style="width:100%; min-width:520px; max-height:70vh; overflow-y:auto; box-sizing:border-box; padding:8px 4px 4px;">
+        <form class="procedure-runner" style="width:100%; max-height:70vh; overflow-y:auto; box-sizing:border-box; padding:8px 4px 4px;">
             <p class="procedure-progress" style="margin:0 0 6px; font-weight:bold;">0 / ${total} done</p>
             ${rows.join("\n")}
         </form>`;
@@ -207,16 +207,26 @@ async function runProcedure(title, steps) {
     const onRender = (rootEl) => bindProcedureHandlers(rootEl, model, executeWorldMacro);
 
     if (DialogV2) {
-        return DialogV2.wait({
-            window: { title: model.title },
-            position: { width: 560 },
-            content,
-            buttons: [{ action: "close", label: "Done", default: true }],
-            rejectClose: false,
-            render: (_event, dialog) => {
-                const rootEl = dialog.element ?? dialog;
-                onRender(rootEl);
-            }
+        return new Promise((resolve) => {
+            let settled = false;
+            const finish = (val) => {
+                if (!settled) {
+                    settled = true;
+                    resolve(val);
+                }
+            };
+            const dialog = new DialogV2({
+                classes: ["ose", "dialog"],
+                window: { title: model.title },
+                position: { width: 560, height: "auto" },
+                content,
+                buttons: [{ action: "close", label: "Done", default: true, callback: () => finish("close") }]
+            });
+            dialog.addEventListener("render", () => {
+                if (dialog.element) onRender(dialog.element);
+            });
+            dialog.addEventListener("close", () => finish(null));
+            dialog.render({ force: true });
         });
     }
 

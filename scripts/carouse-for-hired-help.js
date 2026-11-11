@@ -154,7 +154,8 @@ async function addReputationEffect(pcActor, penaltyAmount) {
     const timestamp = typeof SimpleCalendar?.api !== 'undefined' ? SimpleCalendar.api.timestamp() : Date.now();
     const effectData = {
         name: "Bad Reputation",
-        icon: "icons/svg/downgrade.svg",
+        img: "icons/svg/downgrade.svg",
+        showIcon: typeof CONST !== "undefined" ? (CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2) : 2,
         flags: {
             ose: {
                 isBadReputation: true,
@@ -216,7 +217,8 @@ async function getPCState(pcActor) {
         const latestTimestamp = state.incidents[state.incidents.length - 1].timestamp;
         const effectData = {
             name: "Bad Reputation",
-            icon: "icons/svg/downgrade.svg",
+            img: "icons/svg/downgrade.svg",
+            showIcon: typeof CONST !== "undefined" ? (CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2) : 2,
             flags: {
                 ose: {
                     isBadReputation: true,

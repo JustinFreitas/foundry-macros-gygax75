@@ -18,17 +18,30 @@ global.Hooks = {
 };
 
 global.$ = (x) => x;
-global.Dialog = jest.fn().mockImplementation(function(dialogData) {
-    this.render = jest.fn();
-    this.data = dialogData;
-});
-global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
+
+class MockDialogV2 {
+    static instances = [];
+    static onConstruct = null;
+
+    constructor(dialogData) {
+        this.data = dialogData;
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+        if (MockDialogV2.onConstruct) MockDialogV2.onConstruct(this);
+    }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 describe("Clear Party Sheet Macro", () => {
     beforeEach(() => {
         game.actors = [];
         ui.notifications.info.mockClear();
-        Dialog.mockClear();
+        MockDialogV2.instances = [];
+        MockDialogV2.onConstruct = null;
         Hooks.call.mockClear();
     });
 
@@ -43,7 +56,7 @@ describe("Clear Party Sheet Macro", () => {
         await scriptFunction();
 
         expect(ui.notifications.info).toHaveBeenCalledWith("The party sheet is already empty.");
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
         expect(Hooks.call).not.toHaveBeenCalled();
     });
 
@@ -69,11 +82,9 @@ describe("Clear Party Sheet Macro", () => {
 
         // Hook into the Dialog constructor to auto-confirm
         let dialogPromise;
-        Dialog.mockImplementationOnce(function(dialogData) {
-            this.render = jest.fn();
-            // Simulate clicking 'yes' and store the promise
-            dialogPromise = dialogData.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
-        });
+        MockDialogV2.onConstruct = (dlg) => {
+            dialogPromise = dlg.config.buttons.find(b => b.action === "yes").callback(null, null, { element: document.createElement("div") });
+        };
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const scriptFunction = new AsyncFunction(macroScript);
@@ -82,7 +93,7 @@ describe("Clear Party Sheet Macro", () => {
         // Wait for the callback to finish
         await dialogPromise;
         
-        expect(Dialog).toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(1);
         
         // Check that setFlag was called for party members with correct arguments
         expect(actors[0].setFlag).toHaveBeenCalledWith("ose", "party", false);

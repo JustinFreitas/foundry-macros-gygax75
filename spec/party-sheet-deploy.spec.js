@@ -42,11 +42,20 @@ global.ui = {
 };
 
 global.$ = (x) => x;
-global.Dialog = jest.fn().mockImplementation(function(dialogData) {
-    this.render = jest.fn();
-    this.data = dialogData;
-});
-global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
+
+class MockDialogV2 {
+    static instances = [];
+    constructor(dialogData) {
+        this.data = dialogData;
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+    }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 // Build a token actor stub with the given id/name.
 function actor(id) {
@@ -89,6 +98,7 @@ function placedCoords() {
 describe("Party Sheet Deploy Macro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        MockDialogV2.instances = [];
         global.canvas.tokens.controlled = [];
         global.canvas.regions.placeables = [];
         global.CONFIG.Canvas.polygonBackends.move.testCollision.mockReturnValue(false);
@@ -115,8 +125,8 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
 
-        expect(Dialog).toHaveBeenCalled();
-        const dialogData = Dialog.mock.calls[0][0];
+        expect(MockDialogV2.instances.length).toBe(1);
+        const dialogData = MockDialogV2.instances[0].config;
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
 
         // Simulate clicking 'North'
@@ -147,7 +157,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn((selector) => [{ checked: selector.includes("singleFile") }]) };
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         // Single file North facing: (500,500) -> (500,600) -> (500,700)
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
@@ -170,7 +180,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "east").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "east").callback(null, null, { element: mockHtml });
 
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(2);
@@ -184,6 +194,7 @@ describe("Party Sheet Deploy Macro", () => {
         // 2x2 anchors at its top-left corner (500,500) and ignores its bulk.
         const run = async (width, height) => {
             jest.clearAllMocks();
+            MockDialogV2.instances = [];
             global.canvas.tokens.controlled = [{
                 document: { x: 500, y: 500, width, height, delete: jest.fn() },
                 center: { x: 500 + width * 50, y: 500 + height * 50 }
@@ -195,7 +206,7 @@ describe("Party Sheet Deploy Macro", () => {
             );
             eval(macroScript);
             const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
-            await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+            await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
             return placedCoords();
         };
 
@@ -225,7 +236,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();
         expect(coords).toHaveLength(3);
@@ -258,7 +269,7 @@ describe("Party Sheet Deploy Macro", () => {
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
         // Facing North => "back" runs +y, i.e. down the corridor and around the bend.
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();
         // Exact path order, strictly one wide, rounding the corner.
@@ -293,7 +304,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();
         // All eight must be seated within the room — none dropped, none leaked.
@@ -323,7 +334,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) }; // double file
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();
         // Each rank is filled two-abreast before stepping back: a tidy 2x3 block
@@ -365,7 +376,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn((selector) => [{ checked: selector.includes("singleFile") }]) }; // single file
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "west").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "west").callback(null, null, { element: mockHtml });
 
         const coords = placedCoords();
         // Exactly one token per corridor cell, in path order: east leg then the
@@ -391,7 +402,7 @@ describe("Party Sheet Deploy Macro", () => {
 
         eval(macroScript);
         const mockHtml = { find: jest.fn().mockReturnValue([{ checked: false }]) };
-        await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
+        await MockDialogV2.instances[0].config.buttons.find(b => b.action === "north").callback(null, null, { element: mockHtml });
 
         const created = canvas.scene.createEmbeddedDocuments.mock.calls[0][1];
         expect(created).toHaveLength(1); // only the leader cell could be filled

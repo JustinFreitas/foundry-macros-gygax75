@@ -424,7 +424,7 @@ function openConsumptionDialog(unitsFed) {
         buttons: [
             {
                 action: "consume",
-                icon: '<i class="fas fa-utensils"></i>',
+                icon: "fas fa-utensils",
                 label: 'Consume',
                 default: true,
                 callback: async (event, button, dialog) => {
@@ -492,7 +492,7 @@ function openConsumptionDialog(unitsFed) {
             },
             {
                 action: "cancel",
-                icon: '<i class="fas fa-times"></i>',
+                icon: "fas fa-times",
                 label: 'Cancel',
                 callback: () => ui.notifications.info("Consumption cancelled.")
             }
@@ -553,7 +553,7 @@ const dialog = new DialogV2({
     buttons: [
         {
             action: "proceed",
-            icon: '<i class="fas fa-arrow-right"></i>',
+            icon: "fas fa-arrow-right",
             label: 'Continue',
             default: true,
             callback: (event, button, dialog) => {
@@ -578,7 +578,7 @@ const dialog = new DialogV2({
         },
         {
             action: "cancel",
-            icon: '<i class="fas fa-times"></i>',
+            icon: "fas fa-times",
             label: 'Cancel All',
             callback: () => ui.notifications.info("Daily check cancelled.")
         }

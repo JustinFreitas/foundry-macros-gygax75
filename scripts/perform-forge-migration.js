@@ -19,8 +19,9 @@
     console.log(`%cForge Migration V4 | Execution Started (DRY_RUN: ${DRY_RUN})`, "color: blue; font-weight: bold; border: 1px solid blue; padding: 2px;");
 
     // --- Safety Check for Local Folder ---
+    const FilePickerImpl = foundry?.applications?.apps?.FilePicker?.implementation ?? FilePicker;
     try {
-        await FilePicker.browse("data", LOCAL_PREFIX);
+        await FilePickerImpl.browse("data", LOCAL_PREFIX);
     } catch (e) {
         ui.notifications.error(`Forge Migration Aborted: Folder 'Data/${LOCAL_PREFIX}' not found.`);
         return;

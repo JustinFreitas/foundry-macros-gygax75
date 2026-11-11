@@ -165,7 +165,7 @@ function buildItemPayloads(haul, cfg = CONFIG) {
     if (haul.jewelry) {
         payloads.push({
             item: clone(cfg.JEWELRY_SOURCE.id, {
-                name: `Jewelry (${haul.jewelry.value} gp)`,
+                name: `Jewelry (${haul.jewelry.value} gp) (Found)`,
                 "system.cost": haul.jewelry.value
             }),
             quantity: 1
@@ -178,7 +178,7 @@ function haulToHtml(haul) {
     const rows = [];
     for (const c of haul.coins) rows.push(`<li>${c.quantity} &times; ${c.kind}</li>`);
     if (haul.gem) rows.push(`<li>1 &times; ${haul.gem.name}</li>`);
-    if (haul.jewelry) rows.push(`<li>1 &times; Jewelry (${haul.jewelry.value} gp)</li>`);
+    if (haul.jewelry) rows.push(`<li>1 &times; Jewelry (${haul.jewelry.value} gp) (Found)</li>`);
     return (
         `<h2>Encounter Treasure</h2>` +
         `<p><em>Loot the creature was carrying.</em></p>` +
@@ -192,11 +192,18 @@ function haulToHtml(haul) {
 // Prompt for the dungeon level (default 1), returning an integer or null if cancelled.
 async function promptLevel() {
     return await new Promise((resolve) => {
+        let settled = false;
+        const finish = (val) => {
+            if (!settled) {
+                settled = true;
+                resolve(val);
+            }
+        };
         const { DialogV2 } = foundry.applications.api;
         const dialog = new DialogV2({
             classes: ["ose", "dialog"],
-        position: { width: 400, height: "auto" },
-        window: { title: "Encounter Treasure" },
+            position: { width: 400, height: "auto" },
+            window: { title: "Encounter Treasure" },
             content: `<p>Dungeon level for this drop:</p>
                 <input type="number" min="1" step="1" value="1" style="width:100%"
                        id="enc-treasure-level" autofocus/>`,
@@ -208,13 +215,14 @@ async function promptLevel() {
                     callback: (event, button, dialog) => {
                         const el = dialog.element.querySelector("#enc-treasure-level");
                         const n = Math.max(1, Math.floor(Number(el?.value)) || 1);
-                        resolve(n);
+                        finish(n);
                     }
                 },
-                { action: "cancel", label: "Cancel", callback: () => resolve(null) }
+                { action: "cancel", label: "Cancel", callback: () => finish(null) }
             ]
         });
-    dialog.render(true);
+        dialog.addEventListener?.("close", () => finish(null));
+        dialog.render(true);
     });
 }
 
@@ -259,6 +267,9 @@ if (typeof module !== "undefined" && module.exports) {
         rollBudget,
         pickGem,
         splitCoins,
-        composeHaul
+        composeHaul,
+        buildItemPayloads,
+        haulToHtml,
+        promptLevel
     };
 }

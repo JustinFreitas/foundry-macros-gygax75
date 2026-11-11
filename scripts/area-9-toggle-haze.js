@@ -52,10 +52,12 @@
           await token.actor.createEmbeddedDocuments("ActiveEffect", [{
             name: "Haze",
             img: effectIcon,
-            icon: effectIcon,
-            changes: [
-              { key: "system.thac0.mod.ranged", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "-1", priority: 20 }
-            ]
+            showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON?.ALWAYS ?? 2,
+            system: {
+              changes: [
+                { key: "system.thac0.mod.missile", type: "add", value: -1, priority: 20 }
+              ]
+            }
           }]);
         }
       }

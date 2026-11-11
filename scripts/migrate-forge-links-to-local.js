@@ -26,6 +26,7 @@
     console.log(`%cForge Migration | Execution Started (DRY_RUN: ${DRY_RUN})`, "color: blue; font-weight: bold; border: 1px solid blue; padding: 2px;");
 
     const visited = new WeakSet();
+    const resolveUuidSync = foundry?.utils?.fromUuidSync ?? fromUuidSync;
     const uniqueForgeUrls = new Map(); // Map<URL, {status: string, docs: Map<DocId, Set<property_path>>}>
     const docToUpdates = new Map(); // Map<DocRef, {updates: Object}>
 
@@ -134,7 +135,7 @@
             }
 
             for (const [uuid, paths] of info.docs.entries()) {
-                const doc = fromUuidSync(uuid);
+                const doc = resolveUuidSync(uuid);
                 if (!doc) continue;
 
                 if (!docToUpdates.has(doc)) docToUpdates.set(doc, {});
@@ -170,7 +171,7 @@
             brokenItems.forEach(item => {
                 let affectedStr = "";
                 for (const [uuid, paths] of item.docs.entries()) {
-                    const doc = fromUuidSync(uuid);
+                    const doc = resolveUuidSync(uuid);
                     const link = doc ? `@UUID[${uuid}]{${doc.name}}` : "Unknown Document";
                     affectedStr += `<strong>${link}</strong>: ${Array.from(paths).join(', ')}<br>`;
                 }

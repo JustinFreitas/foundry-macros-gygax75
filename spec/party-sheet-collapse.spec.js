@@ -25,11 +25,20 @@ global.game = {
 global.ui = { notifications: { warn: jest.fn(), info: jest.fn() } };
 
 global.$ = (x) => x;
-global.Dialog = jest.fn().mockImplementation(function (dialogData) {
-    this.render = jest.fn();
-    this.data = dialogData;
-});
-global.foundry = { applications: { api: { DialogV2: global.Dialog } } };
+
+class MockDialogV2 {
+    static instances = [];
+    constructor(dialogData) {
+        this.data = dialogData;
+        this.config = dialogData;
+        this.render = jest.fn();
+        this.addEventListener = jest.fn();
+        MockDialogV2.instances.push(this);
+    }
+}
+
+global.Dialog = MockDialogV2;
+global.foundry = { applications: { api: { DialogV2: MockDialogV2 } } };
 
 // A party-sheet character actor.
 function charActor(id, marchingOrder) {
@@ -61,7 +70,7 @@ function setup(charActors, tokens) {
 // Run a chosen direction button with a chosen size ("1" or "2").
 async function run(direction, size) {
     const html = { find: jest.fn().mockReturnValue([{ value: size }]) };
-    await global.Dialog.mock.calls[0][0].buttons.find(b => b.action === direction).callback(null, null, { element: html });
+    await MockDialogV2.instances[0].config.buttons.find(b => b.action === direction).callback(null, null, { element: html });
 }
 
 function createdToken() {
@@ -71,6 +80,7 @@ function createdToken() {
 describe("Party Sheet Collapse Macro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        MockDialogV2.instances = [];
         canvas.tokens.placeables = [];
     });
 
@@ -81,7 +91,7 @@ describe("Party Sheet Collapse Macro", () => {
         expect(ui.notifications.warn).toHaveBeenCalledWith(
             'No actor named "Party" was found to create the Party token.'
         );
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
     });
 
     test("warns if no party-character tokens are on the scene", () => {
@@ -90,7 +100,7 @@ describe("Party Sheet Collapse Macro", () => {
         expect(ui.notifications.warn).toHaveBeenCalledWith(
             "No party-character tokens were found on this scene to collapse."
         );
-        expect(Dialog).not.toHaveBeenCalled();
+        expect(MockDialogV2.instances.length).toBe(0);
     });
 
     test("5' (1x1) token anchors directly on the rank-1 leader", async () => {
@@ -142,6 +152,7 @@ describe("Party Sheet Collapse Macro", () => {
 
         for (const [dir, [x, y]] of Object.entries(cases)) {
             jest.clearAllMocks();
+            MockDialogV2.instances = [];
             const a1 = charActor('a1', 1);
             setup([a1], [tokenFor(a1, 5, 5)]);
             eval(macroScript);
